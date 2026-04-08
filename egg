@@ -1,122 +1,217 @@
--- Auto Collect Eggs Script
--- Game: 108533757090220
+-- ============================================================
+--              AUTO EGG COLLECTOR - GUI VERSION
+--              Game ID: 108533757090220
+-- ============================================================
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+-- ╔══════════════════════════════╗
+-- ║         CONFIG AREA          ║
+-- ╚══════════════════════════════╝
+local CONFIG = {
+    AutoStart     = false,   -- true = nyala otomatis | false = manual via tombol
+    CollectDelay  = 0.5,     -- jeda antar egg (detik)
+    ScanInterval  = 1.0,     -- jeda antar scan ulang
+    TeleportOffset = Vector3.new(0, 3, 0), -- offset teleport
+    ProximityRadius = 10,    -- radius cari ProximityPrompt
+}
+-- ============================================================
 
-local CollectDelay = 0.5  -- jeda antar egg (detik)
-local TeleportOffset = Vector3.new(0, 3, 0) -- offset agar tidak nyangkut di tanah
+local Players       = game:GetService("Players")
+local TweenService  = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService    = game:GetService("RunService")
 
--- Fungsi cari semua ProximityPrompt di sekitar area
-local function getProximityPromptNear(position, radius)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") then
-            local part = obj.Parent
-            if part and part:IsA("BasePart") then
-                local dist = (part.Position - position).Magnitude
-                if dist <= radius then
-                    return obj
-                end
-            end
-        end
-    end
-    return nil
+local LocalPlayer   = Players.LocalPlayer
+local PlayerGui     = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ─── State ───────────────────────────────────────────────────
+local isRunning     = false
+local isMinimized   = false
+local scriptThread  = nil
+local logLines      = {}
+local MAX_LOG       = 50
+
+-- ─── Destroy existing GUI ────────────────────────────────────
+if PlayerGui:FindFirstChild("AutoEggGUI") then
+    PlayerGui:FindFirstChild("AutoEggGUI"):Destroy()
 end
 
--- Fungsi fire ProximityPrompt
-local function fireProximity(prompt)
-    local success, err = pcall(function()
-        fireproximityprompt(prompt) -- method executor
-    end)
-    if not success then
-        -- fallback manual trigger
-        pcall(function()
-            prompt:InputHoldBegin()
-            task.wait(0.1)
-            prompt:InputHoldEnd()
-        end)
-    end
+-- ════════════════════════════════════════════════════════════
+--  BUILD GUI
+-- ════════════════════════════════════════════════════════════
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name            = "AutoEggGUI"
+ScreenGui.ResetOnSpawn    = false
+ScreenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent          = PlayerGui
+
+-- ── Main Frame ───────────────────────────────────────────────
+local MainFrame = Instance.new("Frame")
+MainFrame.Name            = "MainFrame"
+MainFrame.Size            = UDim2.new(0, 320, 0, 380)
+MainFrame.Position        = UDim2.new(0.5, -160, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent          = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+-- drop shadow illusion
+local Shadow = Instance.new("ImageLabel")
+Shadow.Size               = UDim2.new(1, 30, 1, 30)
+Shadow.Position           = UDim2.new(0, -15, 0, -15)
+Shadow.BackgroundTransparency = 1
+Shadow.Image              = "rbxassetid://6015897843"
+Shadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
+Shadow.ImageTransparency  = 0.5
+Shadow.ScaleType          = Enum.ScaleType.Slice
+Shadow.SliceCenter        = Rect.new(49, 49, 450, 450)
+Shadow.ZIndex             = 0
+Shadow.Parent             = MainFrame
+
+-- ── Title Bar ────────────────────────────────────────────────
+local TitleBar = Instance.new("Frame")
+TitleBar.Name             = "TitleBar"
+TitleBar.Size             = UDim2.new(1, 0, 0, 38)
+TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TitleBar.BorderSizePixel  = 0
+TitleBar.Parent           = MainFrame
+
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+
+-- fix bottom corners of titlebar
+local TitleFix = Instance.new("Frame")
+TitleFix.Size             = UDim2.new(1, 0, 0.5, 0)
+TitleFix.Position         = UDim2.new(0, 0, 0.5, 0)
+TitleFix.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TitleFix.BorderSizePixel  = 0
+TitleFix.Parent           = TitleBar
+
+-- accent bar kiri
+local Accent = Instance.new("Frame")
+Accent.Size               = UDim2.new(0, 3, 1, 0)
+Accent.BackgroundColor3   = Color3.fromRGB(100, 220, 100)
+Accent.BorderSizePixel    = 0
+Accent.Parent             = TitleBar
+
+Instance.new("UICorner", Accent).CornerRadius = UDim.new(0, 3)
+
+-- icon label
+local TitleIcon = Instance.new("TextLabel")
+TitleIcon.Size            = UDim2.new(0, 24, 0, 24)
+TitleIcon.Position        = UDim2.new(0, 12, 0.5, -12)
+TitleIcon.BackgroundTransparency = 1
+TitleIcon.Text            = "🥚"
+TitleIcon.TextSize        = 16
+TitleIcon.Font            = Enum.Font.GothamBold
+TitleIcon.Parent          = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size           = UDim2.new(1, -110, 1, 0)
+TitleLabel.Position       = UDim2.new(0, 40, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text           = "Auto Egg Collector"
+TitleLabel.TextColor3     = Color3.fromRGB(220, 220, 255)
+TitleLabel.TextSize       = 14
+TitleLabel.Font           = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent         = TitleBar
+
+local SubLabel = Instance.new("TextLabel")
+SubLabel.Size             = UDim2.new(1, -110, 0, 14)
+SubLabel.Position         = UDim2.new(0, 40, 1, -15)
+SubLabel.BackgroundTransparency = 1
+SubLabel.Text             = "Game ID: 108533757090220"
+SubLabel.TextColor3       = Color3.fromRGB(100, 100, 130)
+SubLabel.TextSize         = 10
+SubLabel.Font             = Enum.Font.Gotham
+SubLabel.TextXAlignment   = Enum.TextXAlignment.Left
+SubLabel.Parent           = TitleBar
+
+-- ── Window Buttons ───────────────────────────────────────────
+local BtnContainer = Instance.new("Frame")
+BtnContainer.Size         = UDim2.new(0, 70, 0, 22)
+BtnContainer.Position     = UDim2.new(1, -80, 0.5, -11)
+BtnContainer.BackgroundTransparency = 1
+BtnContainer.Parent       = TitleBar
+
+local function makeWinBtn(pos, col, symbol)
+    local btn = Instance.new("TextButton")
+    btn.Size              = UDim2.new(0, 22, 0, 22)
+    btn.Position          = UDim2.new(0, pos, 0, 0)
+    btn.BackgroundColor3  = col
+    btn.Text              = symbol
+    btn.TextColor3        = Color3.fromRGB(30, 30, 30)
+    btn.TextSize          = 11
+    btn.Font              = Enum.Font.GothamBold
+    btn.BorderSizePixel   = 0
+    btn.Parent            = BtnContainer
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+    return btn
 end
 
--- Fungsi utama collect semua egg
-local function collectAllEggs()
-    local collected = 0
-    local failed = 0
+local MinBtn   = makeWinBtn(0,  Color3.fromRGB(255, 189, 68),  "─")
+local CloseBtn = makeWinBtn(28, Color3.fromRGB(255, 95, 87),   "✕")
 
-    while true do
-        -- Step 1: Cari semua Collectable di Workspace
-        local collectables = {}
-        for _, obj in ipairs(workspace:GetChildren()) do
-            if obj.Name == "Collectable" then
-                table.insert(collectables, obj)
-            end
-        end
+-- ── Body ─────────────────────────────────────────────────────
+local Body = Instance.new("Frame")
+Body.Name                 = "Body"
+Body.Size                 = UDim2.new(1, 0, 1, -38)
+Body.Position             = UDim2.new(0, 0, 0, 38)
+Body.BackgroundTransparency = 1
+Body.Parent               = MainFrame
 
-        -- Kalau tidak ada lagi, selesai
-        if #collectables == 0 then
-            print("[AutoEgg] Semua egg sudah dikumpulkan! Total: " .. collected)
-            break
-        end
+local BodyLayout = Instance.new("UIListLayout")
+BodyLayout.Padding        = UDim.new(0, 6)
+BodyLayout.FillDirection  = Enum.FillDirection.Vertical
+BodyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+BodyLayout.Parent         = Body
 
-        print("[AutoEgg] Ditemukan " .. #collectables .. " egg tersisa...")
+local BodyPad = Instance.new("UIPadding")
+BodyPad.PaddingTop        = UDim.new(0, 8)
+BodyPad.PaddingLeft       = UDim.new(0, 10)
+BodyPad.PaddingRight      = UDim.new(0, 10)
+BodyPad.Parent            = Body
 
-        local foundNew = false
+-- ── Status Card ───────────────────────────────────────────────
+local StatusCard = Instance.new("Frame")
+StatusCard.Size           = UDim2.new(1, 0, 0, 52)
+StatusCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+StatusCard.BorderSizePixel = 0
+StatusCard.Parent         = Body
+Instance.new("UICorner", StatusCard).CornerRadius = UDim.new(0, 8)
 
-        for _, collectable in ipairs(collectables) do
-            -- Pastikan object masih ada
-            if not collectable or not collectable.Parent then
-                continue
-            end
+local StatusDot = Instance.new("Frame")
+StatusDot.Size            = UDim2.new(0, 10, 0, 10)
+StatusDot.Position        = UDim2.new(0, 12, 0.5, -5)
+StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+StatusDot.BorderSizePixel = 0
+StatusDot.Parent          = StatusCard
+Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
-            -- Step 2: Ambil posisi CFrame
-            local targetPosition
-            local success = pcall(function()
-                if collectable:IsA("BasePart") then
-                    targetPosition = collectable.Position
-                elseif collectable:FindFirstChildWhichIsA("BasePart") then
-                    targetPosition = collectable:FindFirstChildWhichIsA("BasePart").Position
-                elseif collectable.PrimaryPart then
-                    targetPosition = collectable.PrimaryPart.Position
-                end
-            end)
+local StatusText = Instance.new("TextLabel")
+StatusText.Size           = UDim2.new(1, -100, 0, 18)
+StatusText.Position       = UDim2.new(0, 30, 0, 8)
+StatusText.BackgroundTransparency = 1
+StatusText.Text           = "Status: Mati"
+StatusText.TextColor3     = Color3.fromRGB(200, 200, 200)
+StatusText.TextSize       = 13
+StatusText.Font           = Enum.Font.GothamBold
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent         = StatusCard
 
-            if not success or not targetPosition then
-                failed = failed + 1
-                continue
-            end
+local CountText = Instance.new("TextLabel")
+CountText.Size            = UDim2.new(1, -30, 0, 14)
+CountText.Position        = UDim2.new(0, 30, 0, 28)
+CountText.BackgroundTransparency = 1
+CountText.Text            = "Terkumpul: 0  |  Gagal: 0  |  Tersisa: 0"
+CountText.TextColor3      = Color3.fromRGB(120, 120, 150)
+CountText.TextSize        = 10
+CountText.Font            = Enum.Font.Gotham
+CountText.TextXAlignment  = Enum.TextXAlignment.Left
+CountText.Parent          = StatusCard
 
-            -- Step 3: Teleport LocalPlayer ke posisi egg
-            HumanoidRootPart.CFrame = CFrame.new(targetPosition + TeleportOffset)
-            task.wait(0.2) -- tunggu sebentar setelah teleport
-
-            -- Step 4: Cari & fire ProximityPrompt di sekitar
-            local prompt = getProximityPromptNear(targetPosition, 10)
-            if prompt then
-                fireProximity(prompt)
-                collected = collected + 1
-                foundNew = true
-                print("[AutoEgg] Collected egg #" .. collected .. " di " .. tostring(targetPosition))
-                task.wait(CollectDelay)
-            else
-                -- Tidak ada prompt ditemukan, skip
-                failed = failed + 1
-            end
-        end
-
-        -- Kalau satu putaran tidak ada yang baru, keluar
-        if not foundNew then
-            print("[AutoEgg] Tidak ada egg baru yang bisa diambil. Selesai.")
-            break
-        end
-
-        task.wait(1) -- jeda sebelum scan ulang
-    end
-
-    print("[AutoEgg] Selesai! Berhasil: " .. collected .. " | Gagal: " .. failed)
-end
-
--- Jalankan
-print("[AutoEgg] Script dimulai...")
-collectAllEggs()
+-- ── Toggle Button ────────────────────────────────────────────
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size            = UDim2.new(1, 0, 0, 38)
+ToggleBtn.BackgroundColor3
