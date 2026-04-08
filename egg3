@@ -1,57 +1,98 @@
 -- ============================================================
--- RADAR PEMBONGKAR LOKASI PROMPT (Berdiri di dekat telur!)
+--  CORE FUNCTIONS (MENGGUNAKAN JALUR REMOTE BYPASS)
 -- ============================================================
-print("==================================================")
-print("🔍 MENCARI LOKASI ASLI PROMPT DI SEKITAR PEMAIN...")
-print("==================================================")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectRemote = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("CollectCollectable")
 
-local player = game.Players.LocalPlayer
-local char = player.Character
-local rootPos = char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.Position
-
-if not rootPos then
-    warn("Karakter tidak ditemukan!")
-    return
-end
-
-local promptKetemu = 0
-
--- 1. Menggeledah SEMUA ProximityPrompt di seluruh dunia game
-for _, obj in ipairs(workspace:GetDescendants()) do
-    if obj:IsA("ProximityPrompt") then
-        -- Cek apakah prompt ini menempel di objek (Parent) atau pakai sistem jarak jauh (Adornee)
-        local targetPart = obj.Adornee or obj.Parent
-        
-        if targetPart and targetPart:IsA("BasePart") then
-            local jarak = (targetPart.Position - rootPos).Magnitude
-            
-            -- Jika prompt itu berada dalam radius 15 meter dari pemain
-            if jarak <= 15 then
-                print("🎯 BINGO! Sensor Ditemukan!")
-                print("📍 JALUR ASLI (PATH):", obj:GetFullName())
-                print("🔗 Menempel pada:", targetPart:GetFullName())
-                print("--------------------------------------------------")
-                promptKetemu = promptKetemu + 1
-            end
-        end
-    end
-end
-
--- 2. Jika 0, berarti itu bukan ProximityPrompt asli! Kita cari UI Palsu.
-if promptKetemu == 0 then
-    print("⚠️ Peringatan: Tidak ada ProximityPrompt asli di dekatmu!")
-    print("Mencurigai penggunaan UI Kustom. Menggeledah PlayerGui...")
+-- Fungsi khusus untuk mencari ID angka misterius dari dalam telur
+local function getEggID(eggPart)
+    -- 1. Cek apakah disimpan di Attribute (Sangat mungkin, seperti kasus Tomat)
+    local id = eggPart:GetAttribute("ID") or eggPart:GetAttribute("Id")
     
-    local guiFolder = player:FindFirstChild("PlayerGui")
-    if guiFolder then
-        for _, gui in ipairs(guiFolder:GetDescendants()) do
-            -- Mencari UI yang namanya mengandung kata 'Prompt', 'Interact', atau 'Collect'
-            local namaLower = gui.Name:lower()
-            if gui:IsA("GuiObject") and (namaLower:match("prompt") or namaLower:match("interact") or namaLower:match("collect")) then
-                print("🕵️ MENCURIGAKAN (UI):", gui:GetFullName(), "| Tipe:", gui.ClassName)
+    -- 2. Cek apakah disimpan di ValueObject
+    if not id then
+        for _, child in pairs(eggPart:GetChildren()) do
+            if child:IsA("IntValue") or child:IsA("NumberValue") then
+                id = child.Value
+                break
             end
         end
     end
+    
+    -- 3. Cek apakah namanya sendiri adalah ID (misal nama partnya "123")
+    if not id and tonumber(eggPart.Name) then
+        id = tonumber(eggPart.Name)
+    end
+
+    return id
 end
 
-print("==================================================")
+-- ============================================================
+--  MAIN COLLECTOR LOOP (JALUR BYPASS)
+-- ============================================================
+local function runCollector()
+    collected = 0
+    failed    = 0
+    addLog("Script Remote Bypass dimulai!", Color3.fromRGB(100, 255, 100))
+
+    while isRunning do
+        local char = LocalPlayer.Character
+        if not char then task.wait(1) continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then task.wait(1) continue end
+
+        -- Kumpulkan semua telur
+        local collectables = {}
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "Collectable" then
+                table.insert(collectables, obj)
+            end
+        end
+
+        if #collectables == 0 then
+            updateCount(0)
+            addLog("Menunggu telur respawn...", Color3.fromRGB(200, 200, 200))
+            task.wait(CONFIG.ScanInterval)
+            continue
+        end
+
+        updateCount(#collectables)
+
+        for _, col in ipairs(collectables) do
+            if not isRunning then break end
+            if not col or not col.Parent then continue end
+
+            local pos = col:IsA("BasePart") and col.Position or (col:FindFirstChildWhichIsA("BasePart") and col:FindFirstChildWhichIsA("BasePart").Position)
+            
+            if not pos then continue end
+
+            -- 1. TELEPORT KE TELUR (Biar Anti-Cheat ngira kita benar-benar jalan ke sana)
+            hrp.CFrame = CFrame.new(pos + CONFIG.TeleportOffset)
+            task.wait(0.2) -- Jeda sebentar biar aman
+
+            -- 2. CARI ID TELUR & TEMBAK SERVER LANGSUNG!
+            local targetID = getEggID(col)
+            
+            if targetID then
+                -- Bypass! Kita tembak langsung tanpa pencet ProximityPrompt
+                CollectRemote:FireServer(targetID)
+                
+                -- Hapus telurnya secara lokal
+                col:Destroy()
+                
+                collected = collected + 1
+                addLog("✔ Egg [ID:"..targetID.."] berhasil di-hack!", Color3.fromRGB(255, 215, 0))
+                updateCount(#collectables - collected)
+                
+                task.wait(CONFIG.CollectDelay)
+            else
+                failed = failed + 1
+                addLog("✘ Gagal menemukan ID Telur", Color3.fromRGB(255, 100, 100))
+                -- Hapus juga biar gak nge-stuck di telur tanpa ID
+                col:Destroy() 
+            end
+        end
+
+        task.wait(CONFIG.ScanInterval)
+    end
+end
