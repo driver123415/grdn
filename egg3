@@ -1,16 +1,140 @@
 -- ============================================================
---  CORE FUNCTIONS (MENGGUNAKAN JALUR REMOTE BYPASS)
+--              AUTO EGG COLLECTOR - REMOTE BYPASS VERSION
+--              Game ID: 108533757090220
 -- ============================================================
-print("testa 1")
+print("eah test")
+local CONFIG = {
+    AutoStart      = false,
+    CollectDelay   = 0.5,
+    ScanInterval   = 1.0,
+    TeleportOffset = Vector3.new(0, 3, 0),
+}
+
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+
+local isRunning   = false
+local isMinimized = false
+local scriptThread = nil
+local logLines    = {}
+local MAX_LOG     = 50
+local collected   = 0
+local failed      = 0
+
+-- ─── Bersihkan GUI lama jika ada ─────────────────────────────
+if PlayerGui:FindFirstChild("AutoEggGUI") then
+    PlayerGui:FindFirstChild("AutoEggGUI"):Destroy()
+end
+
+-- ============================================================
+-- BUILD GUI (TAMPILAN)
+-- ============================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoEggGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 320, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 38)
+TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+local TitleFix = Instance.new("Frame") TitleFix.Size = UDim2.new(1, 0, 0.5, 0) TitleFix.Position = UDim2.new(0, 0, 0.5, 0) TitleFix.BackgroundColor3 = Color3.fromRGB(20, 20, 30) TitleFix.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -110, 1, 0) TitleLabel.Position = UDim2.new(0, 40, 0, 0) TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Auto Egg (Remote Bypass)" TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255) TitleLabel.Font = Enum.Font.GothamBold TitleLabel.TextSize = 13 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left TitleLabel.Parent = TitleBar
+
+local SubLabel = Instance.new("TextLabel")
+SubLabel.Size = UDim2.new(1, -110, 0, 14) SubLabel.Position = UDim2.new(0, 40, 1, -15) SubLabel.BackgroundTransparency = 1
+SubLabel.Text = "Game ID: 108533757090220" SubLabel.TextColor3 = Color3.fromRGB(100, 100, 130) SubLabel.Font = Enum.Font.Gotham SubLabel.TextSize = 10 SubLabel.TextXAlignment = Enum.TextXAlignment.Left SubLabel.Parent = TitleBar
+
+local BtnContainer = Instance.new("Frame")
+BtnContainer.Size = UDim2.new(0, 70, 0, 22) BtnContainer.Position = UDim2.new(1, -80, 0.5, -11) BtnContainer.BackgroundTransparency = 1 BtnContainer.Parent = TitleBar
+
+local function makeWinBtn(pos, col, symbol)
+    local btn = Instance.new("TextButton") btn.Size = UDim2.new(0, 22, 0, 22) btn.Position = UDim2.new(0, pos, 0, 0) btn.BackgroundColor3 = col btn.Text = symbol btn.TextColor3 = Color3.fromRGB(30, 30, 30) btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.Parent = BtnContainer Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0) return btn
+end
+local MinBtn = makeWinBtn(0, Color3.fromRGB(255, 189, 68), "─")
+local CloseBtn = makeWinBtn(28, Color3.fromRGB(255, 95, 87), "✕")
+
+local Body = Instance.new("Frame")
+Body.Size = UDim2.new(1, 0, 1, -38) Body.Position = UDim2.new(0, 0, 0, 38) Body.BackgroundTransparency = 1 Body.Parent = MainFrame
+local BodyLayout = Instance.new("UIListLayout") BodyLayout.Padding = UDim.new(0, 6) BodyLayout.FillDirection = Enum.FillDirection.Vertical BodyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center BodyLayout.Parent = Body
+local BodyPad = Instance.new("UIPadding") BodyPad.PaddingTop = UDim.new(0, 8) BodyPad.PaddingLeft = UDim.new(0, 10) BodyPad.PaddingRight = UDim.new(0, 10) BodyPad.Parent = Body
+
+local StatusCard = Instance.new("Frame") StatusCard.Size = UDim2.new(1, 0, 0, 52) StatusCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) StatusCard.Parent = Body Instance.new("UICorner", StatusCard).CornerRadius = UDim.new(0, 8)
+local StatusDot = Instance.new("Frame") StatusDot.Size = UDim2.new(0, 10, 0, 10) StatusDot.Position = UDim2.new(0, 12, 0.5, -5) StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80) StatusDot.Parent = StatusCard Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+local StatusText = Instance.new("TextLabel") StatusText.Size = UDim2.new(1, -100, 0, 18) StatusText.Position = UDim2.new(0, 30, 0, 8) StatusText.BackgroundTransparency = 1 StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200) StatusText.Font = Enum.Font.GothamBold StatusText.TextSize = 13 StatusText.TextXAlignment = Enum.TextXAlignment.Left StatusText.Parent = StatusCard
+local CountText = Instance.new("TextLabel") CountText.Size = UDim2.new(1, -30, 0, 14) CountText.Position = UDim2.new(0, 30, 0, 28) CountText.BackgroundTransparency = 1 CountText.Text = "Terkumpul: 0  |  Gagal: 0" CountText.TextColor3 = Color3.fromRGB(120, 120, 150) CountText.Font = Enum.Font.Gotham CountText.TextSize = 10 CountText.TextXAlignment = Enum.TextXAlignment.Left CountText.Parent = StatusCard
+
+local ToggleBtn = Instance.new("TextButton") ToggleBtn.Size = UDim2.new(1, 0, 0, 38) ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "▶  MULAI SCRIPT" ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ToggleBtn.Font = Enum.Font.GothamBold ToggleBtn.TextSize = 13 ToggleBtn.Parent = Body Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local CfgCard = Instance.new("Frame") CfgCard.Size = UDim2.new(1, 0, 0, 60) CfgCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) CfgCard.Parent = Body Instance.new("UICorner", CfgCard).CornerRadius = UDim.new(0, 8)
+local DelayLabel = Instance.new("TextLabel") DelayLabel.Size = UDim2.new(1, -10, 0, 18) DelayLabel.Position = UDim2.new(0, 10, 0, 5) DelayLabel.BackgroundTransparency = 1 DelayLabel.Text = "Delay Antar Telur: " .. CONFIG.CollectDelay .. "s" DelayLabel.TextColor3 = Color3.fromRGB(180, 180, 220) DelayLabel.Font = Enum.Font.GothamBold DelayLabel.TextSize = 11 DelayLabel.TextXAlignment = Enum.TextXAlignment.Left DelayLabel.Parent = CfgCard
+
+local LogOuter = Instance.new("Frame") LogOuter.Size = UDim2.new(1, 0, 0, 148) LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18) LogOuter.Parent = Body Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
+local LogTitle = Instance.new("TextLabel") LogTitle.Size = UDim2.new(1, 0, 0, 20) LogTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30) LogTitle.Text = "  📋 Console Log" LogTitle.TextColor3 = Color3.fromRGB(160, 160, 200) LogTitle.Font = Enum.Font.GothamBold LogTitle.TextSize = 11 LogTitle.TextXAlignment = Enum.TextXAlignment.Left LogTitle.Parent = LogOuter Instance.new("UICorner", LogTitle).CornerRadius = UDim.new(0, 8)
+local LogScroll = Instance.new("ScrollingFrame") LogScroll.Size = UDim2.new(1, -6, 1, -24) LogScroll.Position = UDim2.new(0, 3, 0, 22) LogScroll.BackgroundTransparency = 1 LogScroll.ScrollBarThickness = 3 LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y LogScroll.Parent = LogOuter
+local LogLayout = Instance.new("UIListLayout") LogLayout.Padding = UDim.new(0, 1) LogLayout.Parent = LogScroll
+
+-- ============================================================
+-- HELPER FUNCTIONS
+-- ============================================================
+local function addLog(msg, color)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -4, 0, 13)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = os.date("%H:%M:%S") .. " " .. msg
+    lbl.TextColor3 = color or Color3.fromRGB(180, 180, 180)
+    lbl.Font = Enum.Font.Code
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = LogScroll
+    table.insert(logLines, lbl)
+    if #logLines > MAX_LOG then logLines[1]:Destroy() table.remove(logLines, 1) end
+    task.defer(function() LogScroll.CanvasPosition = Vector2.new(0, math.huge) end)
+end
+
+local function setStatus(running)
+    if running then
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
+        StatusText.Text = "Status: Mencari Telur..." StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) ToggleBtn.Text = "⏹  HENTIKAN SCRIPT"
+    else
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "▶  MULAI SCRIPT"
+    end
+end
+
+local function updateCount()
+    CountText.Text = "Berhasil: " .. collected .. "  |  Gagal: " .. failed
+end
+
+-- ============================================================
+-- CORE LOGIC (REMOTE BYPASS)
+-- ============================================================
+-- Siapkan jalur remote untuk Collect
 local CollectRemote = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("CollectCollectable")
 
--- Fungsi khusus untuk mencari ID angka misterius dari dalam telur
+-- Fungsi pencari ID Angka dari dalam telur
 local function getEggID(eggPart)
-    -- 1. Cek apakah disimpan di Attribute (Sangat mungkin, seperti kasus Tomat)
     local id = eggPart:GetAttribute("ID") or eggPart:GetAttribute("Id")
-    
-    -- 2. Cek apakah disimpan di ValueObject
     if not id then
         for _, child in pairs(eggPart:GetChildren()) do
             if child:IsA("IntValue") or child:IsA("NumberValue") then
@@ -19,22 +143,16 @@ local function getEggID(eggPart)
             end
         end
     end
-    
-    -- 3. Cek apakah namanya sendiri adalah ID (misal nama partnya "123")
     if not id and tonumber(eggPart.Name) then
         id = tonumber(eggPart.Name)
     end
-
     return id
 end
 
--- ============================================================
---  MAIN COLLECTOR LOOP (JALUR BYPASS)
--- ============================================================
 local function runCollector()
     collected = 0
     failed    = 0
-    addLog("Script Remote Bypass dimulai!", Color3.fromRGB(100, 255, 100))
+    addLog("Sistem Bypass Remote Aktif!", Color3.fromRGB(100, 255, 100))
 
     while isRunning do
         local char = LocalPlayer.Character
@@ -42,7 +160,7 @@ local function runCollector()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then task.wait(1) continue end
 
-        -- Kumpulkan semua telur
+        -- 1. Kumpulkan semua objek bernama "Collectable" di map
         local collectables = {}
         for _, obj in ipairs(workspace:GetChildren()) do
             if obj.Name == "Collectable" then
@@ -50,15 +168,16 @@ local function runCollector()
             end
         end
 
+        -- Jika tidak ada telur, tunggu santai
         if #collectables == 0 then
-            updateCount(0)
-            addLog("Menunggu telur respawn...", Color3.fromRGB(200, 200, 200))
+            addLog("Menunggu telur baru muncul...", Color3.fromRGB(150, 150, 150))
             task.wait(CONFIG.ScanInterval)
             continue
         end
 
-        updateCount(#collectables)
+        addLog("Ditemukan " .. #collectables .. " telur di map.", Color3.fromRGB(100, 200, 255))
 
+        -- 2. Eksekusi satu-satu
         for _, col in ipairs(collectables) do
             if not isRunning then break end
             if not col or not col.Parent then continue end
@@ -67,33 +186,79 @@ local function runCollector()
             
             if not pos then continue end
 
-            -- 1. TELEPORT KE TELUR (Biar Anti-Cheat ngira kita benar-benar jalan ke sana)
+            -- Teleport karakter ke telur biar server tidak curiga (Anti-Cheat safe)
             hrp.CFrame = CFrame.new(pos + CONFIG.TeleportOffset)
-            task.wait(0.2) -- Jeda sebentar biar aman
+            task.wait(0.2) 
 
-            -- 2. CARI ID TELUR & TEMBAK SERVER LANGSUNG!
+            -- Cari ID angka rahasia di dalam telur tersebut
             local targetID = getEggID(col)
             
             if targetID then
-                -- Bypass! Kita tembak langsung tanpa pencet ProximityPrompt
+                -- BINGO! Tembak langsung remotenya ke server pakai ID tersebut!
                 CollectRemote:FireServer(targetID)
                 
-                -- Hapus telurnya secara lokal
+                -- Hapus fisik telurnya dari map kita
                 col:Destroy()
                 
                 collected = collected + 1
-                addLog("✔ Egg [ID:"..targetID.."] berhasil di-hack!", Color3.fromRGB(255, 215, 0))
-                updateCount(#collectables - collected)
+                addLog("✔ Telur [ID: " .. targetID .. "] berhasil diambil!", Color3.fromRGB(255, 215, 0))
+                updateCount()
                 
                 task.wait(CONFIG.CollectDelay)
             else
                 failed = failed + 1
-                addLog("✘ Gagal menemukan ID Telur", Color3.fromRGB(255, 100, 100))
-                -- Hapus juga biar gak nge-stuck di telur tanpa ID
+                addLog("✘ Telur bodong (Tidak ada ID). Diabaikan.", Color3.fromRGB(255, 100, 100))
                 col:Destroy() 
+                updateCount()
             end
         end
 
         task.wait(CONFIG.ScanInterval)
     end
 end
+
+-- ============================================================
+-- GUI INTERACTION & DRAG
+-- ============================================================
+ToggleBtn.MouseButton1Click:Connect(function()
+    if isRunning then
+        isRunning = false 
+        setStatus(false) 
+        addLog("Script dihentikan manual.", Color3.fromRGB(255, 150, 80))
+    else
+        isRunning = true 
+        setStatus(true) 
+        scriptThread = task.spawn(runCollector)
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function() 
+    isRunning = false 
+    ScreenGui:Destroy() 
+end)
+
+MinBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    local targetSize = isMinimized and UDim2.new(0, 320, 0, 38) or UDim2.new(0, 320, 0, 380)
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
+    task.delay(isMinimized and 0 or 0.1, function() Body.Visible = not isMinimized end)
+    MinBtn.Text = isMinimized and "▢" or "─"
+end)
+
+local dragging, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+
+print("[AutoEgg GUI] Script Terpasang Sukses!")
