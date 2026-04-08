@@ -1,32 +1,33 @@
 -- =========================================================
--- [SMART AUTO FARM] CLOSEST EGG TELEPORT
+-- [ULTRA-FAST AUTO FARM] WORKSPACE POSITION TELEPORT
 -- =========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-print("🥚 Smart Auto-Collect (Closest First) Aktif!")
+print("🥚 Ultra-Fast Auto-Collect (Berdasarkan Position) Aktif!")
 
--- Fungsi khusus untuk mencari 1 telur paling dekat
+-- Fungsi untuk mendapatkan telur terdekat langsung dari Workspace
 local function getClosestEgg()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
     
     local playerPos = character.HumanoidRootPart.Position
     local closestEgg = nil
-    local shortestDistance = math.huge -- Set jarak awal ke tak terhingga (infinity)
+    local shortestDistance = math.huge
 
-    -- Geledah seluruh map
-    for _, obj in pairs(workspace:GetDescendants()) do
+    -- MENCARI LANGSUNG DI WORKSPACE (Jauh lebih ringan dan efisien)
+    for _, obj in pairs(workspace:GetChildren()) do
+        
+        -- Deteksi nama dan wujud fisiknya
         if obj.Name == "Collectable" and obj:IsA("BasePart") then
             local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt")
             
-            -- Pastikan prompt-nya ada dan belum diambil orang lain (Enabled)
+            -- Pastikan prompt-nya aktif
             if prompt and prompt.Enabled then
-                -- Hitung jarak dari pemain ke telur menggunakan .Magnitude
+                -- Mengambil jarak dari properti Position
                 local distance = (obj.Position - playerPos).Magnitude
                 
-                -- Jika jarak ini lebih pendek dari yang sebelumnya, jadikan target utama
                 if distance < shortestDistance then
                     shortestDistance = distance
                     closestEgg = obj
@@ -38,26 +39,27 @@ local function getClosestEgg()
     return closestEgg
 end
 
--- Loop Utama: Teleport -> Ambil -> Cari lagi
+-- Loop utama eksekusi
 while task.wait(0.5) do
     local character = LocalPlayer.Character
-    
-    -- Panggil fungsi radar jarak terdekat
     local targetEgg = getClosestEgg()
     
     if targetEgg and character and character:FindFirstChild("HumanoidRootPart") then
         local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt")
         
         if prompt then
-            -- 1. Teleport menggunakan PivotTo (Lebih stabil dari CFrame biasa)
-            -- Angka Vector3.new(0, 3, 0) agar muncul di atas telur, bukan di bawah tanah
-            local targetCFrame = targetEgg.CFrame + Vector3.new(0, 3, 0)
-            character:PivotTo(targetCFrame)
+            -- MENGAMBIL KOORDINAT DARI PROPERTIES "POSITION"
+            -- Kita tambah Vector3.new(0, 3, 0) agar karakter tidak tersangkut di dalam tanah
+            local targetPosition = targetEgg.Position + Vector3.new(0, 3, 0)
             
-            -- 2. Beri waktu server menyadari posisi barumu (Wajib ada!)
+            -- Teleport karakter ke koordinat Position tersebut
+            -- (Di Roblox, memindahkan karakter fisik wajib dibungkus dengan CFrame)
+            character:PivotTo(CFrame.new(targetPosition))
+            
+            -- Tunggu server memuat posisi baru
             task.wait(0.3)
             
-            -- 3. Eksekusi Proximity Prompt (Ambil Telur)
+            -- Ambil telurnya
             if fireproximityprompt then
                 fireproximityprompt(prompt)
             else
@@ -66,7 +68,7 @@ while task.wait(0.5) do
                 prompt:InputHoldEnd()
             end
             
-            -- 4. Jeda istirahat sebelum mencari telur selanjutnya (Mencegah kick)
+            -- Istirahat sebentar sebelum pindah ke telur lain
             task.wait(0.5)
         end
     end
