@@ -5,7 +5,7 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-print("🥚 Ultra-Fast Auto-Collect (Berdasarkan Position) Aktif!")
+print("🥚 Ultra-Fast Auto-Collect (Berdasarkan Position) Aktif! 22")
 
 -- Fungsi untuk mendapatkan telur terdekat langsung dari Workspace
 local function getClosestEgg()
