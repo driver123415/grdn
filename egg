@@ -1,22 +1,34 @@
 -- =========================================================
--- [ULTRA-FAST AUTO FARM] METODE HRP CFRAME
+-- [DEBUG VERSION] AUTO FARM COLLECTABLE
 -- =========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-print("🥚 Auto-Collect (Metode HRP CFrame) Aktif!33")
+print("--- [DEBUG] Script Dimulai 1 ---")
 
 local function getClosestEgg()
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+    if not character then 
+        print("DEBUG: Karakter belum spawn.")
+        return nil 
+    end
     
-    local playerPos = character.HumanoidRootPart.Position
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then 
+        print("DEBUG: HumanoidRootPart tidak ditemukan.")
+        return nil 
+    end
+    
+    local playerPos = hrp.Position
     local closestEgg = nil
     local shortestDistance = math.huge
+    local foundAny = false
 
+    -- Mencari telur
     for _, obj in pairs(workspace:GetChildren()) do
         if obj.Name == "Collectable" and obj:IsA("BasePart") then
+            foundAny = true
             local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt")
             
             if prompt and prompt.Enabled then
@@ -29,35 +41,47 @@ local function getClosestEgg()
         end
     end
     
+    if not foundAny then
+        print("DEBUG: Tidak ada objek bernama 'Collectable' di Workspace.")
+    end
+    
     return closestEgg
 end
 
-while task.wait(0.5) do
+-- Loop Eksekusi
+while task.wait(1) do
+    print("--- [DEBUG] Mencari target terdekat... ---")
+    
     local character = LocalPlayer.Character
     local targetEgg = getClosestEgg()
     
-    if targetEgg and character and character:FindFirstChild("HumanoidRootPart") then
+    if targetEgg then
+        local hrp = character:FindFirstChild("HumanoidRootPart")
         local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt")
         
-        if prompt then
-            -- MENGGUNAKAN METODE TELEPORT ANDALANMU
-            -- Mengambil posisi X,Y,Z target dan ditambah tinggi sedikit (+3 Y) agar tidak tembus tanah
+        if hrp and prompt then
             local targetPos = targetEgg.Position + Vector3.new(0, 3, 0)
+            local distance = (targetEgg.Position - hrp.Position).Magnitude
             
-            -- Set CFrame HumanoidRootPart secara langsung
-            character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
+            print("DEBUG: Menuju telur di " .. tostring(targetEgg.Position) .. " | Jarak: " .. math.floor(distance))
             
-            task.wait(0.3) -- Jeda wajib agar server meregister posisi baru
+            -- Eksekusi Teleport (Metode CFrame murni)
+            hrp.CFrame = CFrame.new(targetPos)
             
+            task.wait(0.5) -- Memberi waktu server sinkronisasi
+            
+            print("DEBUG: Mencoba memicu ProximityPrompt...")
             if fireproximityprompt then
                 fireproximityprompt(prompt)
+                print("DEBUG: fireproximityprompt berhasil dipanggil.")
             else
                 prompt.HoldDuration = 0
                 prompt:InputHoldBegin()
                 prompt:InputHoldEnd()
+                print("DEBUG: Metode input manual digunakan.")
             end
-            
-            task.wait(0.5) -- Jeda sebelum cari telur berikutnya
         end
+    else
+        print("DEBUG: Menunggu telur muncul atau semua telur sudah diambil.")
     end
 end
