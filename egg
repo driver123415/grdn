@@ -1,87 +1,122 @@
--- =========================================================
--- [DEBUG VERSION] AUTO FARM COLLECTABLE
--- =========================================================
+-- Auto Collect Eggs Script
+-- Game: 108533757090220
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
-print("--- [DEBUG] Script Dimulai 1 ---")
+local CollectDelay = 0.5  -- jeda antar egg (detik)
+local TeleportOffset = Vector3.new(0, 3, 0) -- offset agar tidak nyangkut di tanah
 
-local function getClosestEgg()
-    local character = LocalPlayer.Character
-    if not character then 
-        print("DEBUG: Karakter belum spawn.")
-        return nil 
-    end
-    
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then 
-        print("DEBUG: HumanoidRootPart tidak ditemukan.")
-        return nil 
-    end
-    
-    local playerPos = hrp.Position
-    local closestEgg = nil
-    local shortestDistance = math.huge
-    local foundAny = false
-
-    -- Mencari telur
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj.Name == "Collectable" and obj:IsA("BasePart") then
-            foundAny = true
-            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt")
-            
-            if prompt and prompt.Enabled then
-                local distance = (obj.Position - playerPos).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestEgg = obj
+-- Fungsi cari semua ProximityPrompt di sekitar area
+local function getProximityPromptNear(position, radius)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local part = obj.Parent
+            if part and part:IsA("BasePart") then
+                local dist = (part.Position - position).Magnitude
+                if dist <= radius then
+                    return obj
                 end
             end
         end
     end
-    
-    if not foundAny then
-        print("DEBUG: Tidak ada objek bernama 'Collectable' di Workspace.")
-    end
-    
-    return closestEgg
+    return nil
 end
 
--- Loop Eksekusi
-while task.wait(1) do
-    print("--- [DEBUG] Mencari target terdekat... ---")
-    
-    local character = LocalPlayer.Character
-    local targetEgg = getClosestEgg()
-    
-    if targetEgg then
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt")
-        
-        if hrp and prompt then
-            local targetPos = targetEgg.Position + Vector3.new(0, 3, 0)
-            local distance = (targetEgg.Position - hrp.Position).Magnitude
-            
-            print("DEBUG: Menuju telur di " .. tostring(targetEgg.Position) .. " | Jarak: " .. math.floor(distance))
-            
-            -- Eksekusi Teleport (Metode CFrame murni)
-            hrp.CFrame = CFrame.new(targetPos)
-            
-            task.wait(0.5) -- Memberi waktu server sinkronisasi
-            
-            print("DEBUG: Mencoba memicu ProximityPrompt...")
-            if fireproximityprompt then
-                fireproximityprompt(prompt)
-                print("DEBUG: fireproximityprompt berhasil dipanggil.")
-            else
-                prompt.HoldDuration = 0
-                prompt:InputHoldBegin()
-                prompt:InputHoldEnd()
-                print("DEBUG: Metode input manual digunakan.")
-            end
-        end
-    else
-        print("DEBUG: Menunggu telur muncul atau semua telur sudah diambil.")
+-- Fungsi fire ProximityPrompt
+local function fireProximity(prompt)
+    local success, err = pcall(function()
+        fireproximityprompt(prompt) -- method executor
+    end)
+    if not success then
+        -- fallback manual trigger
+        pcall(function()
+            prompt:InputHoldBegin()
+            task.wait(0.1)
+            prompt:InputHoldEnd()
+        end)
     end
 end
+
+-- Fungsi utama collect semua egg
+local function collectAllEggs()
+    local collected = 0
+    local failed = 0
+
+    while true do
+        -- Step 1: Cari semua Collectable di Workspace
+        local collectables = {}
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "Collectable" then
+                table.insert(collectables, obj)
+            end
+        end
+
+        -- Kalau tidak ada lagi, selesai
+        if #collectables == 0 then
+            print("[AutoEgg] Semua egg sudah dikumpulkan! Total: " .. collected)
+            break
+        end
+
+        print("[AutoEgg] Ditemukan " .. #collectables .. " egg tersisa...")
+
+        local foundNew = false
+
+        for _, collectable in ipairs(collectables) do
+            -- Pastikan object masih ada
+            if not collectable or not collectable.Parent then
+                continue
+            end
+
+            -- Step 2: Ambil posisi CFrame
+            local targetPosition
+            local success = pcall(function()
+                if collectable:IsA("BasePart") then
+                    targetPosition = collectable.Position
+                elseif collectable:FindFirstChildWhichIsA("BasePart") then
+                    targetPosition = collectable:FindFirstChildWhichIsA("BasePart").Position
+                elseif collectable.PrimaryPart then
+                    targetPosition = collectable.PrimaryPart.Position
+                end
+            end)
+
+            if not success or not targetPosition then
+                failed = failed + 1
+                continue
+            end
+
+            -- Step 3: Teleport LocalPlayer ke posisi egg
+            HumanoidRootPart.CFrame = CFrame.new(targetPosition + TeleportOffset)
+            task.wait(0.2) -- tunggu sebentar setelah teleport
+
+            -- Step 4: Cari & fire ProximityPrompt di sekitar
+            local prompt = getProximityPromptNear(targetPosition, 10)
+            if prompt then
+                fireProximity(prompt)
+                collected = collected + 1
+                foundNew = true
+                print("[AutoEgg] Collected egg #" .. collected .. " di " .. tostring(targetPosition))
+                task.wait(CollectDelay)
+            else
+                -- Tidak ada prompt ditemukan, skip
+                failed = failed + 1
+            end
+        end
+
+        -- Kalau satu putaran tidak ada yang baru, keluar
+        if not foundNew then
+            print("[AutoEgg] Tidak ada egg baru yang bisa diambil. Selesai.")
+            break
+        end
+
+        task.wait(1) -- jeda sebelum scan ulang
+    end
+
+    print("[AutoEgg] Selesai! Berhasil: " .. collected .. " | Gagal: " .. failed)
+end
+
+-- Jalankan
+print("[AutoEgg] Script dimulai...")
+collectAllEggs()
