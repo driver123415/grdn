@@ -1,13 +1,12 @@
 -- =========================================================
--- [ULTRA-FAST AUTO FARM] WORKSPACE POSITION TELEPORT
+-- [ULTRA-FAST AUTO FARM] METODE HRP CFRAME
 -- =========================================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-print("🥚 Ultra-Fast Auto-Collect (Berdasarkan Position) Aktif! 22")
+print("🥚 Auto-Collect (Metode HRP CFrame) Aktif!33")
 
--- Fungsi untuk mendapatkan telur terdekat langsung dari Workspace
 local function getClosestEgg()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -16,18 +15,12 @@ local function getClosestEgg()
     local closestEgg = nil
     local shortestDistance = math.huge
 
-    -- MENCARI LANGSUNG DI WORKSPACE (Jauh lebih ringan dan efisien)
     for _, obj in pairs(workspace:GetChildren()) do
-        
-        -- Deteksi nama dan wujud fisiknya
         if obj.Name == "Collectable" and obj:IsA("BasePart") then
             local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt")
             
-            -- Pastikan prompt-nya aktif
             if prompt and prompt.Enabled then
-                -- Mengambil jarak dari properti Position
                 local distance = (obj.Position - playerPos).Magnitude
-                
                 if distance < shortestDistance then
                     shortestDistance = distance
                     closestEgg = obj
@@ -39,7 +32,6 @@ local function getClosestEgg()
     return closestEgg
 end
 
--- Loop utama eksekusi
 while task.wait(0.5) do
     local character = LocalPlayer.Character
     local targetEgg = getClosestEgg()
@@ -48,18 +40,15 @@ while task.wait(0.5) do
         local prompt = targetEgg:FindFirstChildWhichIsA("ProximityPrompt")
         
         if prompt then
-            -- MENGAMBIL KOORDINAT DARI PROPERTIES "POSITION"
-            -- Kita tambah Vector3.new(0, 3, 0) agar karakter tidak tersangkut di dalam tanah
-            local targetPosition = targetEgg.Position + Vector3.new(0, 3, 0)
+            -- MENGGUNAKAN METODE TELEPORT ANDALANMU
+            -- Mengambil posisi X,Y,Z target dan ditambah tinggi sedikit (+3 Y) agar tidak tembus tanah
+            local targetPos = targetEgg.Position + Vector3.new(0, 3, 0)
             
-            -- Teleport karakter ke koordinat Position tersebut
-            -- (Di Roblox, memindahkan karakter fisik wajib dibungkus dengan CFrame)
-            character:PivotTo(CFrame.new(targetPosition))
+            -- Set CFrame HumanoidRootPart secara langsung
+            character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
             
-            -- Tunggu server memuat posisi baru
-            task.wait(0.3)
+            task.wait(0.3) -- Jeda wajib agar server meregister posisi baru
             
-            -- Ambil telurnya
             if fireproximityprompt then
                 fireproximityprompt(prompt)
             else
@@ -68,8 +57,7 @@ while task.wait(0.5) do
                 prompt:InputHoldEnd()
             end
             
-            -- Istirahat sebentar sebelum pindah ke telur lain
-            task.wait(0.5)
+            task.wait(0.5) -- Jeda sebelum cari telur berikutnya
         end
     end
 end
