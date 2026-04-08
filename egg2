@@ -1,69 +1,48 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+-- =========================================================
+-- [DETEKTIF DEBUG] SCANNER KOORDINAT TELUR
+-- =========================================================
 
-print("--- [ULTIMATE BYPASS] Script Antrean Telur Aktif 22 ---")
+print("=========================================")
+print("📡 MEMULAI SCANNING WORKSPACE... 📡")
+print("=========================================")
 
-while task.wait(1) do
-    local character = LocalPlayer.Character
+local telurDitemukan = 0
+
+-- Mengambil semua anak langsung dari Workspace
+for _, obj in pairs(workspace:GetChildren()) do
     
-    if character and character:FindFirstChild("HumanoidRootPart") then 
-        local hrp = character.HumanoidRootPart
+    -- Cek apakah namanya "Collectable"
+    if obj.Name == "Collectable" then
+        telurDitemukan = telurDitemukan + 1
         
-        -- 1. KUMPULKAN TELUR
-        local antreanTelur = {}
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name == "Collectable" and obj:IsA("BasePart") then
-                table.insert(antreanTelur, obj)
-            end
+        -- Cek apakah dia punya posisi (BasePart)
+        local koordinat = "Tidak Ada Posisi"
+        if obj:IsA("BasePart") then
+            koordinat = tostring(obj.Position)
         end
-
-        print("DEBUG: Menemukan " .. #antreanTelur .. " telur.")
-
-        -- 2. EKSEKUSI TELEPORT & AMBIL
-        for _, telur in ipairs(antreanTelur) do
-            if telur and telur.Parent then
-                local prompt = telur:FindFirstChildWhichIsA("ProximityPrompt")
-                
-                if prompt then
-                    -- TELEPORT: Kali ini kita mendarat di SAMPING telur, bukan di atasnya
-                    -- Vector3.new(3, 0, 0) membuatmu mendarat 3 langkah di sebelah telur
-                    local targetPos = telur.Position + Vector3.new(3, 1, 0)
-                    hrp.CFrame = CFrame.new(targetPos)
-                    
-                    -- Tunggu server sadar kamu sudah pindah
-                    task.wait(0.5) 
-                    
-                    -- MANIPULASI PROMPT (Membajak sistem keamanan sensor)
-                    prompt.RequiresLineOfSight = false -- Matikan deteksi tembok
-                    prompt.MaxActivationDistance = 50  -- Perbesar jarak sensor jadi 50 meter
-                    
-                    -- EKSEKUSI PROMPT
-                    local success, err = pcall(function()
-                        if fireproximityprompt then
-                            -- Beberapa executor butuh angka 1 atau durasi asli untuk bekerja
-                            fireproximityprompt(prompt, 1) 
-                            print("DEBUG: fireproximityprompt dieksekusi.")
-                        else
-                            error("Executor tidak support fireproximityprompt")
-                        end
-                    end)
-                    
-                    -- JIKA EXECUTOR GAGAL, GUNAKAN METODE MANUAL YANG AMAN
-                    if not success then
-                        print("DEBUG: Pakai klik manual (durasi: " .. prompt.HoldDuration .. " detik)")
-                        prompt:InputHoldBegin()
-                        -- Kita WAJIB menunggu sesuai durasi asli agar server tidak curiga
-                        task.wait(prompt.HoldDuration + 0.1) 
-                        prompt:InputHoldEnd()
-                    end
-                end
-                
-                -- Hapus fisik telur dari Workspace lokal
-                telur:Destroy()
-                
-                -- Jeda sebelum teleport ke telur berikutnya
-                task.wait(0.5) 
-            end
+        
+        -- Cek keberadaan ProximityPrompt di dalamnya
+        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt")
+        local statusPrompt = "❌ TIDAK ADA PROMPT"
+        
+        if prompt then
+            statusPrompt = "✅ PROMPT ADA (Enabled: " .. tostring(prompt.Enabled) .. ")"
         end
+        
+        -- Print hasil bedah ke console
+        print(string.format("[%d] 📍 Jalur: %s | 📍 Posisi: %s | %s", 
+            telurDitemukan, 
+            obj:GetFullName(), 
+            koordinat, 
+            statusPrompt
+        ))
     end
+end
+
+if telurDitemukan == 0 then
+    warn("⚠️ DEBUG SELESAI: Tidak ada satupun objek bernama 'Collectable' ditemukan di Workspace.")
+else
+    print("=========================================")
+    print("✅ SCAN SELESAI: Berhasil mendeteksi " .. telurDitemukan .. " telur.")
+    print("=========================================")
 end
