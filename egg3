@@ -1,6 +1,7 @@
 -- ============================================================
 --  CORE FUNCTIONS (MENGGUNAKAN JALUR REMOTE BYPASS)
 -- ============================================================
+print("testa 1")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectRemote = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("CollectCollectable")
 
