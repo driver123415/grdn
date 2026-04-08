@@ -7,28 +7,28 @@
 -- ║         CONFIG AREA          ║
 -- ╚══════════════════════════════╝
 local CONFIG = {
-    AutoStart     = false,   -- true = nyala otomatis | false = manual via tombol
-    CollectDelay  = 0.5,     -- jeda antar egg (detik)
-    ScanInterval  = 1.0,     -- jeda antar scan ulang
-    TeleportOffset = Vector3.new(0, 3, 0), -- offset teleport
-    ProximityRadius = 10,    -- radius cari ProximityPrompt
+    AutoStart      = false,  -- true = nyala otomatis | false = manual via tombol
+    CollectDelay   = 0.5,    -- jeda antar egg (detik)
+    ScanInterval   = 1.0,    -- jeda antar scan ulang
+    TeleportOffset = Vector3.new(0, 3, 0),
+    ProximityRadius = 10,
 }
 -- ============================================================
 
-local Players       = game:GetService("Players")
-local TweenService  = game:GetService("TweenService")
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService    = game:GetService("RunService")
 
-local LocalPlayer   = Players.LocalPlayer
-local PlayerGui     = LocalPlayer:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
--- ─── State ───────────────────────────────────────────────────
-local isRunning     = false
-local isMinimized   = false
-local scriptThread  = nil
-local logLines      = {}
-local MAX_LOG       = 50
+local isRunning   = false
+local isMinimized = false
+local scriptThread = nil
+local logLines    = {}
+local MAX_LOG     = 50
+local collected   = 0
+local failed      = 0
 
 -- ─── Destroy existing GUI ────────────────────────────────────
 if PlayerGui:FindFirstChild("AutoEggGUI") then
@@ -39,24 +39,22 @@ end
 --  BUILD GUI
 -- ════════════════════════════════════════════════════════════
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name            = "AutoEggGUI"
-ScreenGui.ResetOnSpawn    = false
-ScreenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent          = PlayerGui
+ScreenGui.Name           = "AutoEggGUI"
+ScreenGui.ResetOnSpawn   = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent         = PlayerGui
 
 -- ── Main Frame ───────────────────────────────────────────────
 local MainFrame = Instance.new("Frame")
-MainFrame.Name            = "MainFrame"
-MainFrame.Size            = UDim2.new(0, 320, 0, 380)
-MainFrame.Position        = UDim2.new(0.5, -160, 0.5, -190)
+MainFrame.Name             = "MainFrame"
+MainFrame.Size             = UDim2.new(0, 320, 0, 380)
+MainFrame.Position         = UDim2.new(0.5, -160, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BorderSizePixel = 0
+MainFrame.BorderSizePixel  = 0
 MainFrame.ClipsDescendants = true
-MainFrame.Parent          = ScreenGui
-
+MainFrame.Parent           = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- drop shadow illusion
 local Shadow = Instance.new("ImageLabel")
 Shadow.Size               = UDim2.new(1, 30, 1, 30)
 Shadow.Position           = UDim2.new(0, -15, 0, -15)
@@ -76,10 +74,8 @@ TitleBar.Size             = UDim2.new(1, 0, 0, 38)
 TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TitleBar.BorderSizePixel  = 0
 TitleBar.Parent           = MainFrame
-
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
 
--- fix bottom corners of titlebar
 local TitleFix = Instance.new("Frame")
 TitleFix.Size             = UDim2.new(1, 0, 0.5, 0)
 TitleFix.Position         = UDim2.new(0, 0, 0.5, 0)
@@ -87,16 +83,13 @@ TitleFix.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TitleFix.BorderSizePixel  = 0
 TitleFix.Parent           = TitleBar
 
--- accent bar kiri
 local Accent = Instance.new("Frame")
 Accent.Size               = UDim2.new(0, 3, 1, 0)
 Accent.BackgroundColor3   = Color3.fromRGB(100, 220, 100)
 Accent.BorderSizePixel    = 0
 Accent.Parent             = TitleBar
-
 Instance.new("UICorner", Accent).CornerRadius = UDim.new(0, 3)
 
--- icon label
 local TitleIcon = Instance.new("TextLabel")
 TitleIcon.Size            = UDim2.new(0, 24, 0, 24)
 TitleIcon.Position        = UDim2.new(0, 12, 0.5, -12)
@@ -150,8 +143,8 @@ local function makeWinBtn(pos, col, symbol)
     return btn
 end
 
-local MinBtn   = makeWinBtn(0,  Color3.fromRGB(255, 189, 68),  "─")
-local CloseBtn = makeWinBtn(28, Color3.fromRGB(255, 95, 87),   "✕")
+local MinBtn   = makeWinBtn(0,  Color3.fromRGB(255, 189, 68), "─")
+local CloseBtn = makeWinBtn(28, Color3.fromRGB(255, 95, 87),  "✕")
 
 -- ── Body ─────────────────────────────────────────────────────
 local Body = Instance.new("Frame")
@@ -214,4 +207,390 @@ CountText.Parent          = StatusCard
 -- ── Toggle Button ────────────────────────────────────────────
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size            = UDim2.new(1, 0, 0, 38)
-ToggleBtn.BackgroundColor3
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60)
+ToggleBtn.Text            = "▶  MULAI SCRIPT"
+ToggleBtn.TextColor3      = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize        = 13
+ToggleBtn.Font            = Enum.Font.GothamBold
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent          = Body
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+
+-- ── Config Card ───────────────────────────────────────────────
+local CfgCard = Instance.new("Frame")
+CfgCard.Size              = UDim2.new(1, 0, 0, 60)
+CfgCard.BackgroundColor3  = Color3.fromRGB(22, 22, 32)
+CfgCard.BorderSizePixel   = 0
+CfgCard.Parent            = Body
+Instance.new("UICorner", CfgCard).CornerRadius = UDim.new(0, 8)
+
+local CfgTitle = Instance.new("TextLabel")
+CfgTitle.Size             = UDim2.new(1, -10, 0, 18)
+CfgTitle.Position         = UDim2.new(0, 10, 0, 5)
+CfgTitle.BackgroundTransparency = 1
+CfgTitle.Text             = "⚙  Pengaturan"
+CfgTitle.TextColor3       = Color3.fromRGB(180, 180, 220)
+CfgTitle.TextSize         = 11
+CfgTitle.Font             = Enum.Font.GothamBold
+CfgTitle.TextXAlignment   = Enum.TextXAlignment.Left
+CfgTitle.Parent           = CfgCard
+
+local DelayLabel = Instance.new("TextLabel")
+DelayLabel.Size           = UDim2.new(0.5, -5, 0, 18)
+DelayLabel.Position       = UDim2.new(0, 10, 0, 26)
+DelayLabel.BackgroundTransparency = 1
+DelayLabel.Text           = "Delay: " .. CONFIG.CollectDelay .. "s"
+DelayLabel.TextColor3     = Color3.fromRGB(140, 140, 170)
+DelayLabel.TextSize       = 10
+DelayLabel.Font           = Enum.Font.Gotham
+DelayLabel.TextXAlignment = Enum.TextXAlignment.Left
+DelayLabel.Parent         = CfgCard
+
+local function makeSmallBtn(xOff, label, parent)
+    local b = Instance.new("TextButton")
+    b.Size                = UDim2.new(0, 22, 0, 18)
+    b.Position            = xOff
+    b.BackgroundColor3    = Color3.fromRGB(35, 35, 50)
+    b.Text                = label
+    b.TextColor3          = Color3.fromRGB(200, 200, 255)
+    b.TextSize            = 12
+    b.Font                = Enum.Font.GothamBold
+    b.BorderSizePixel     = 0
+    b.Parent              = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
+end
+
+local DelayMinus = makeSmallBtn(UDim2.new(0.5, 5,  0, 26), "−", CfgCard)
+local DelayPlus  = makeSmallBtn(UDim2.new(0.5, 30, 0, 26), "+", CfgCard)
+
+local AutoStartLabel = Instance.new("TextLabel")
+AutoStartLabel.Size       = UDim2.new(0.7, 0, 0, 18)
+AutoStartLabel.Position   = UDim2.new(0, 10, 0, 44)
+AutoStartLabel.BackgroundTransparency = 1
+AutoStartLabel.Text       = "AutoStart: " .. (CONFIG.AutoStart and "✔ ON" or "✘ OFF")
+AutoStartLabel.TextColor3 = CONFIG.AutoStart and Color3.fromRGB(100,220,100) or Color3.fromRGB(180,80,80)
+AutoStartLabel.TextSize   = 10
+AutoStartLabel.Font       = Enum.Font.GothamBold
+AutoStartLabel.TextXAlignment = Enum.TextXAlignment.Left
+AutoStartLabel.Parent     = CfgCard
+
+-- ── Log Frame ────────────────────────────────────────────────
+local LogOuter = Instance.new("Frame")
+LogOuter.Size             = UDim2.new(1, 0, 0, 148)
+LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+LogOuter.BorderSizePixel  = 0
+LogOuter.Parent           = Body
+Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
+
+local LogTitle = Instance.new("TextLabel")
+LogTitle.Size             = UDim2.new(1, 0, 0, 20)
+LogTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+LogTitle.Text             = "  📋 Log"
+LogTitle.TextColor3       = Color3.fromRGB(160, 160, 200)
+LogTitle.TextSize         = 11
+LogTitle.Font             = Enum.Font.GothamBold
+LogTitle.TextXAlignment   = Enum.TextXAlignment.Left
+LogTitle.BorderSizePixel  = 0
+LogTitle.Parent           = LogOuter
+Instance.new("UICorner", LogTitle).CornerRadius = UDim.new(0, 8)
+
+local LogFix = Instance.new("Frame")
+LogFix.Size               = UDim2.new(1, 0, 0.5, 0)
+LogFix.Position           = UDim2.new(0, 0, 0.5, 0)
+LogFix.BackgroundColor3   = Color3.fromRGB(20, 20, 30)
+LogFix.BorderSizePixel    = 0
+LogFix.Parent             = LogTitle
+
+local LogScroll = Instance.new("ScrollingFrame")
+LogScroll.Size            = UDim2.new(1, -6, 1, -24)
+LogScroll.Position        = UDim2.new(0, 3, 0, 22)
+LogScroll.BackgroundTransparency = 1
+LogScroll.BorderSizePixel = 0
+LogScroll.ScrollBarThickness = 3
+LogScroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 120)
+LogScroll.CanvasSize      = UDim2.new(0, 0, 0, 0)
+LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogScroll.Parent          = LogOuter
+
+local LogLayout = Instance.new("UIListLayout")
+LogLayout.Padding         = UDim.new(0, 1)
+LogLayout.Parent          = LogScroll
+
+local LogPad = Instance.new("UIPadding")
+LogPad.PaddingLeft        = UDim.new(0, 4)
+LogPad.Parent             = LogScroll
+
+-- ════════════════════════════════════════════════════════════
+--  HELPER FUNCTIONS
+-- ════════════════════════════════════════════════════════════
+local function addLog(msg, color)
+    color = color or Color3.fromRGB(180, 180, 180)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size              = UDim2.new(1, -4, 0, 13)
+    lbl.BackgroundTransparency = 1
+    lbl.Text              = os.date("%H:%M:%S") .. " " .. msg
+    lbl.TextColor3        = color
+    lbl.TextSize          = 10
+    lbl.Font              = Enum.Font.Code
+    lbl.TextXAlignment    = Enum.TextXAlignment.Left
+    lbl.TextWrapped       = true
+    lbl.AutomaticSize     = Enum.AutomaticSize.Y
+    lbl.Parent            = LogScroll
+    table.insert(logLines, lbl)
+    if #logLines > MAX_LOG then
+        logLines[1]:Destroy()
+        table.remove(logLines, 1)
+    end
+    task.defer(function()
+        LogScroll.CanvasPosition = Vector2.new(0, math.huge)
+    end)
+end
+
+local function setStatus(running)
+    if running then
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
+        StatusText.Text            = "Status: Berjalan..."
+        StatusText.TextColor3      = Color3.fromRGB(100, 255, 100)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        ToggleBtn.Text             = "⏹  HENTIKAN SCRIPT"
+    else
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        StatusText.Text            = "Status: Mati"
+        StatusText.TextColor3      = Color3.fromRGB(200, 200, 200)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60)
+        ToggleBtn.Text             = "▶  MULAI SCRIPT"
+    end
+end
+
+local function updateCount(remaining)
+    CountText.Text = "Terkumpul: " .. collected .. "  |  Gagal: " .. failed .. "  |  Tersisa: " .. (remaining or 0)
+end
+
+-- ════════════════════════════════════════════════════════════
+--  CORE FUNCTIONS
+-- ════════════════════════════════════════════════════════════
+local function getProximityPromptNear(position, radius)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local part = obj.Parent
+            if part and part:IsA("BasePart") then
+                if (part.Position - position).Magnitude <= radius then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function fireProximity(prompt)
+    -- Method 1: Synapse X
+    if syn and syn.fireproximityprompt then
+        pcall(syn.fireproximityprompt, prompt)
+        return
+    end
+    -- Method 2: Fluxus
+    if fluxus and fluxus.fire_proximity_prompt then
+        pcall(fluxus.fire_proximity_prompt, prompt)
+        return
+    end
+    -- Method 3: KRNL / Arceus X / Delta / global
+    if fireproximityprompt then
+        pcall(fireproximityprompt, prompt)
+        return
+    end
+    -- Method 4: getconnections trigger (universal)
+    local fired = false
+    pcall(function()
+        if getconnections then
+            for _, con in pairs(getconnections(prompt.TriggerEnded)) do
+                con:Fire()
+                fired = true
+                break
+            end
+        end
+    end)
+    if fired then return end
+    -- Method 5: Simulate hold input (fallback terakhir)
+    pcall(function()
+        prompt:InputHoldBegin()
+        task.wait((prompt.HoldDuration or 0) + 0.1)
+        prompt:InputHoldEnd()
+    end)
+end
+
+-- ════════════════════════════════════════════════════════════
+--  MAIN COLLECTOR LOOP
+-- ════════════════════════════════════════════════════════════
+local function runCollector()
+    collected = 0
+    failed    = 0
+    addLog("Script dimulai", Color3.fromRGB(100, 255, 100))
+
+    while isRunning do
+        local char = LocalPlayer.Character
+        if not char then task.wait(1) continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then task.wait(1) continue end
+
+        -- Step 1: Scan semua Collectable
+        local collectables = {}
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "Collectable" then
+                table.insert(collectables, obj)
+            end
+        end
+
+        if #collectables == 0 then
+            addLog("✔ Semua egg terkumpul! Total: " .. collected, Color3.fromRGB(255, 220, 50))
+            isRunning = false
+            setStatus(false)
+            break
+        end
+
+        updateCount(#collectables)
+        addLog("Ditemukan " .. #collectables .. " egg", Color3.fromRGB(150, 200, 255))
+
+        local foundNew = false
+
+        for _, col in ipairs(collectables) do
+            if not isRunning then break end
+            if not col or not col.Parent then continue end
+
+            -- Step 2: Ambil posisi CFrame
+            local pos
+            pcall(function()
+                if col:IsA("BasePart") then
+                    pos = col.Position
+                elseif col:FindFirstChildWhichIsA("BasePart") then
+                    pos = col:FindFirstChildWhichIsA("BasePart").Position
+                elseif col.PrimaryPart then
+                    pos = col.PrimaryPart.Position
+                end
+            end)
+
+            if not pos then
+                failed = failed + 1
+                addLog("⚠ Gagal ambil posisi egg", Color3.fromRGB(255, 120, 80))
+                continue
+            end
+
+            -- Step 3: Teleport ke posisi egg
+            hrp.CFrame = CFrame.new(pos + CONFIG.TeleportOffset)
+            task.wait(0.2)
+
+            -- Step 4: Cari & fire ProximityPrompt
+            local prompt = getProximityPromptNear(pos, CONFIG.ProximityRadius)
+            if prompt then
+                fireProximity(prompt)
+                collected = collected + 1
+                foundNew  = true
+                addLog("✔ Egg #" .. collected .. " collected", Color3.fromRGB(100, 255, 150))
+                updateCount(#collectables - collected)
+                task.wait(CONFIG.CollectDelay)
+            else
+                failed = failed + 1
+                addLog("✘ Prompt tidak ditemukan", Color3.fromRGB(200, 100, 100))
+            end
+        end
+
+        if not foundNew then
+            addLog("Tidak ada egg baru, berhenti.", Color3.fromRGB(255, 200, 80))
+            isRunning = false
+            setStatus(false)
+            break
+        end
+
+        task.wait(CONFIG.ScanInterval)
+    end
+
+    addLog("Selesai. Berhasil: " .. collected .. " | Gagal: " .. failed, Color3.fromRGB(200, 200, 80))
+    updateCount(0)
+end
+
+-- ════════════════════════════════════════════════════════════
+--  BUTTON EVENTS
+-- ════════════════════════════════════════════════════════════
+ToggleBtn.MouseButton1Click:Connect(function()
+    if isRunning then
+        isRunning = false
+        setStatus(false)
+        addLog("Script dihentikan manual", Color3.fromRGB(255, 150, 80))
+    else
+        isRunning = true
+        setStatus(true)
+        scriptThread = task.spawn(runCollector)
+    end
+end)
+
+DelayMinus.MouseButton1Click:Connect(function()
+    CONFIG.CollectDelay = math.max(0.1, math.floor((CONFIG.CollectDelay - 0.1) * 10 + 0.5) / 10)
+    DelayLabel.Text = "Delay: " .. CONFIG.CollectDelay .. "s"
+end)
+
+DelayPlus.MouseButton1Click:Connect(function()
+    CONFIG.CollectDelay = math.floor((CONFIG.CollectDelay + 0.1) * 10 + 0.5) / 10
+    DelayLabel.Text = "Delay: " .. CONFIG.CollectDelay .. "s"
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    isRunning = false
+    ScreenGui:Destroy()
+end)
+
+-- ── Minimize ─────────────────────────────────────────────────
+MinBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    local targetSize = isMinimized and UDim2.new(0, 320, 0, 38) or UDim2.new(0, 320, 0, 380)
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
+    task.delay(isMinimized and 0 or 0.1, function()
+        Body.Visible = not isMinimized
+    end)
+    MinBtn.Text = isMinimized and "▢" or "─"
+end)
+
+-- ── Drag ─────────────────────────────────────────────────────
+local dragging, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging  = true
+        dragStart = input.Position
+        startPos  = MainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement or
+        input.UserInputType == Enum.UserInputType.Touch
+    ) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- ════════════════════════════════════════════════════════════
+--  AUTO START
+-- ════════════════════════════════════════════════════════════
+if CONFIG.AutoStart then
+    addLog("AutoStart aktif, menjalankan script...", Color3.fromRGB(255, 220, 50))
+    isRunning = true
+    setStatus(true)
+    scriptThread = task.spawn(runCollector)
+else
+    addLog("Script siap. Tekan MULAI untuk memulai.", Color3.fromRGB(150, 150, 200))
+end
+
+print("[AutoEgg GUI] Loaded!")
