@@ -1,66 +1,69 @@
--- =========================================================
--- [BATCH FARM] VERSI MALAS MODIF (SCAN -> LIST -> DELETE)
--- =========================================================
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-print("--- [MODIF] Script Dimulai: Sistem Antrean Aktif ---")
+print("--- [ULTIMATE BYPASS] Script Antrean Telur Aktif 22 ---")
 
 while task.wait(1) do
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then 
-        print("DEBUG: Menunggu Karakter Spawn...")
-        continue 
-    end
-
-    local hrp = character.HumanoidRootPart
     
-    -- 1. MENGAMBIL SEMUA KOORDINAT (Scanning)
-    local antreanTelur = {}
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj.Name == "Collectable" and obj:IsA("BasePart") then
-            table.insert(antreanTelur, obj)
-        end
-    end
-
-    print("DEBUG: Berhasil mendeteksi " .. #antreanTelur .. " telur. Memulai perjalanan...")
-
-    -- 2. TELEPORT 1 PER 1 KE KOORDINAT YANG DIDAPATKAN
-    for _, telur dalam ipairs(antreanTelur) do
-        -- Cek apakah telur masih ada (belum dihapus script lain)
-        if telur and telur.Parent then
-            local targetPos = telur.Position + Vector3.new(0, 3, 0)
-            local prompt = telur:FindFirstChildWhichIsA("ProximityPrompt")
-
-            print("DEBUG: Teleport ke posisi: " .. tostring(targetPos))
-            
-            -- METODE TELEPORT ANDALANMU
-            hrp.CFrame = CFrame.new(targetPos)
-
-            -- Jeda sebentar agar server sinkron
-            task.wait(0.4)
-
-            -- 3. TRIGGER PROXIMITY PROMPT
-            if prompt then
-                if fireproximityprompt then
-                    fireproximityprompt(prompt)
-                else
-                    prompt.HoldDuration = 0
-                    prompt:InputHoldBegin()
-                    prompt:InputHoldEnd()
-                end
-                print("DEBUG: Prompt dipicu.")
+    if character and character:FindFirstChild("HumanoidRootPart") then 
+        local hrp = character.HumanoidRootPart
+        
+        -- 1. KUMPULKAN TELUR
+        local antreanTelur = {}
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name == "Collectable" and obj:IsA("BasePart") then
+                table.insert(antreanTelur, obj)
             end
+        end
 
-            -- 4. OTOMATIS MENGHAPUS OBJEK (Local Delete)
-            -- Ini agar script tidak mendatangi koordinat ini lagi di loop berikutnya
-            telur:Destroy()
-            print("DEBUG: Objek dihapus dari Workspace Lokal.")
-            
-            task.wait(0.5) -- Jeda antar telur
+        print("DEBUG: Menemukan " .. #antreanTelur .. " telur.")
+
+        -- 2. EKSEKUSI TELEPORT & AMBIL
+        for _, telur in ipairs(antreanTelur) do
+            if telur and telur.Parent then
+                local prompt = telur:FindFirstChildWhichIsA("ProximityPrompt")
+                
+                if prompt then
+                    -- TELEPORT: Kali ini kita mendarat di SAMPING telur, bukan di atasnya
+                    -- Vector3.new(3, 0, 0) membuatmu mendarat 3 langkah di sebelah telur
+                    local targetPos = telur.Position + Vector3.new(3, 1, 0)
+                    hrp.CFrame = CFrame.new(targetPos)
+                    
+                    -- Tunggu server sadar kamu sudah pindah
+                    task.wait(0.5) 
+                    
+                    -- MANIPULASI PROMPT (Membajak sistem keamanan sensor)
+                    prompt.RequiresLineOfSight = false -- Matikan deteksi tembok
+                    prompt.MaxActivationDistance = 50  -- Perbesar jarak sensor jadi 50 meter
+                    
+                    -- EKSEKUSI PROMPT
+                    local success, err = pcall(function()
+                        if fireproximityprompt then
+                            -- Beberapa executor butuh angka 1 atau durasi asli untuk bekerja
+                            fireproximityprompt(prompt, 1) 
+                            print("DEBUG: fireproximityprompt dieksekusi.")
+                        else
+                            error("Executor tidak support fireproximityprompt")
+                        end
+                    end)
+                    
+                    -- JIKA EXECUTOR GAGAL, GUNAKAN METODE MANUAL YANG AMAN
+                    if not success then
+                        print("DEBUG: Pakai klik manual (durasi: " .. prompt.HoldDuration .. " detik)")
+                        prompt:InputHoldBegin()
+                        -- Kita WAJIB menunggu sesuai durasi asli agar server tidak curiga
+                        task.wait(prompt.HoldDuration + 0.1) 
+                        prompt:InputHoldEnd()
+                    end
+                end
+                
+                -- Hapus fisik telur dari Workspace lokal
+                telur:Destroy()
+                
+                -- Jeda sebelum teleport ke telur berikutnya
+                task.wait(0.5) 
+            end
         end
     end
-    
-    print("--- [MODIF] Antrean Selesai. Mencari telur baru... ---")
 end
