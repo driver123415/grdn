@@ -1,278 +1,57 @@
 -- ============================================================
---              AUTO EGG COLLECTOR - PROMPT DETECTOR FIXED
---              Game ID: 108533757090220
+-- RADAR PEMBONGKAR LOKASI PROMPT (Berdiri di dekat telur!)
 -- ============================================================
+print("==================================================")
+print("🔍 MENCARI LOKASI ASLI PROMPT DI SEKITAR PEMAIN...")
+print("==================================================")
 
-local CONFIG = {
-    AutoStart      = false,
-    CollectDelay   = 0.5,
-    ScanInterval   = 1.0,
-    TeleportOffset = Vector3.new(0, 3, 0),
-}
+local player = game.Players.LocalPlayer
+local char = player.Character
+local rootPos = char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart.Position
 
-local Players          = game:GetService("Players")
-local TweenService     = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
-
-local isRunning   = false
-local isMinimized = false
-local scriptThread = nil
-local logLines    = {}
-local MAX_LOG     = 50
-local collected   = 0
-local failed      = 0
-
-if PlayerGui:FindFirstChild("AutoEggGUI") then
-    PlayerGui:FindFirstChild("AutoEggGUI"):Destroy()
+if not rootPos then
+    warn("Karakter tidak ditemukan!")
+    return
 end
 
--- ============================================================
--- BUILD GUI (Tampilan UI)
--- ============================================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoEggGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+local promptKetemu = 0
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 38)
-TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-TitleBar.Parent = MainFrame
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
-local TitleFix = Instance.new("Frame") TitleFix.Size = UDim2.new(1, 0, 0.5, 0) TitleFix.Position = UDim2.new(0, 0, 0.5, 0) TitleFix.BackgroundColor3 = Color3.fromRGB(20, 20, 30) TitleFix.Parent = TitleBar
-local Accent = Instance.new("Frame") Accent.Size = UDim2.new(0, 3, 1, 0) Accent.BackgroundColor3 = Color3.fromRGB(100, 220, 100) Accent.Parent = TitleBar
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -110, 1, 0) TitleLabel.Position = UDim2.new(0, 40, 0, 0) TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Auto Egg Collector" TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255) TitleLabel.Font = Enum.Font.GothamBold TitleLabel.TextSize = 14 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left TitleLabel.Parent = TitleBar
-
-local SubLabel = Instance.new("TextLabel")
-SubLabel.Size = UDim2.new(1, -110, 0, 14) SubLabel.Position = UDim2.new(0, 40, 1, -15) SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "Game ID: 108533757090220" SubLabel.TextColor3 = Color3.fromRGB(100, 100, 130) SubLabel.Font = Enum.Font.Gotham SubLabel.TextSize = 10 SubLabel.TextXAlignment = Enum.TextXAlignment.Left SubLabel.Parent = TitleBar
-
-local BtnContainer = Instance.new("Frame")
-BtnContainer.Size = UDim2.new(0, 70, 0, 22) BtnContainer.Position = UDim2.new(1, -80, 0.5, -11) BtnContainer.BackgroundTransparency = 1 BtnContainer.Parent = TitleBar
-
-local function makeWinBtn(pos, col, symbol)
-    local btn = Instance.new("TextButton") btn.Size = UDim2.new(0, 22, 0, 22) btn.Position = UDim2.new(0, pos, 0, 0) btn.BackgroundColor3 = col btn.Text = symbol btn.TextColor3 = Color3.fromRGB(30, 30, 30) btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.Parent = BtnContainer Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0) return btn
-end
-local MinBtn = makeWinBtn(0, Color3.fromRGB(255, 189, 68), "─")
-local CloseBtn = makeWinBtn(28, Color3.fromRGB(255, 95, 87), "✕")
-
-local Body = Instance.new("Frame")
-Body.Size = UDim2.new(1, 0, 1, -38) Body.Position = UDim2.new(0, 0, 0, 38) Body.BackgroundTransparency = 1 Body.Parent = MainFrame
-local BodyLayout = Instance.new("UIListLayout") BodyLayout.Padding = UDim.new(0, 6) BodyLayout.FillDirection = Enum.FillDirection.Vertical BodyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center BodyLayout.Parent = Body
-local BodyPad = Instance.new("UIPadding") BodyPad.PaddingTop = UDim.new(0, 8) BodyPad.PaddingLeft = UDim.new(0, 10) BodyPad.PaddingRight = UDim.new(0, 10) BodyPad.Parent = Body
-
-local StatusCard = Instance.new("Frame") StatusCard.Size = UDim2.new(1, 0, 0, 52) StatusCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) StatusCard.Parent = Body Instance.new("UICorner", StatusCard).CornerRadius = UDim.new(0, 8)
-local StatusDot = Instance.new("Frame") StatusDot.Size = UDim2.new(0, 10, 0, 10) StatusDot.Position = UDim2.new(0, 12, 0.5, -5) StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80) StatusDot.Parent = StatusCard Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
-local StatusText = Instance.new("TextLabel") StatusText.Size = UDim2.new(1, -100, 0, 18) StatusText.Position = UDim2.new(0, 30, 0, 8) StatusText.BackgroundTransparency = 1 StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200) StatusText.Font = Enum.Font.GothamBold StatusText.TextSize = 13 StatusText.TextXAlignment = Enum.TextXAlignment.Left StatusText.Parent = StatusCard
-local CountText = Instance.new("TextLabel") CountText.Size = UDim2.new(1, -30, 0, 14) CountText.Position = UDim2.new(0, 30, 0, 28) CountText.BackgroundTransparency = 1 CountText.Text = "Terkumpul: 0  |  Gagal: 0  |  Tersisa: 0" CountText.TextColor3 = Color3.fromRGB(120, 120, 150) CountText.Font = Enum.Font.Gotham CountText.TextSize = 10 CountText.TextXAlignment = Enum.TextXAlignment.Left CountText.Parent = StatusCard
-
-local ToggleBtn = Instance.new("TextButton") ToggleBtn.Size = UDim2.new(1, 0, 0, 38) ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "▶  MULAI SCRIPT" ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ToggleBtn.Font = Enum.Font.GothamBold ToggleBtn.TextSize = 13 ToggleBtn.Parent = Body Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
-
-local CfgCard = Instance.new("Frame") CfgCard.Size = UDim2.new(1, 0, 0, 60) CfgCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) CfgCard.Parent = Body Instance.new("UICorner", CfgCard).CornerRadius = UDim.new(0, 8)
-local CfgTitle = Instance.new("TextLabel") CfgTitle.Size = UDim2.new(1, -10, 0, 18) CfgTitle.Position = UDim2.new(0, 10, 0, 5) CfgTitle.BackgroundTransparency = 1 CfgTitle.Text = "⚙  Pengaturan" CfgTitle.TextColor3 = Color3.fromRGB(180, 180, 220) CfgTitle.Font = Enum.Font.GothamBold CfgTitle.TextSize = 11 CfgTitle.TextXAlignment = Enum.TextXAlignment.Left CfgTitle.Parent = CfgCard
-local DelayLabel = Instance.new("TextLabel") DelayLabel.Size = UDim2.new(0.5, -5, 0, 18) DelayLabel.Position = UDim2.new(0, 10, 0, 26) DelayLabel.BackgroundTransparency = 1 DelayLabel.Text = "Delay: " .. CONFIG.CollectDelay .. "s" DelayLabel.TextColor3 = Color3.fromRGB(140, 140, 170) DelayLabel.Font = Enum.Font.Gotham DelayLabel.TextSize = 10 DelayLabel.TextXAlignment = Enum.TextXAlignment.Left DelayLabel.Parent = CfgCard
-
-local LogOuter = Instance.new("Frame") LogOuter.Size = UDim2.new(1, 0, 0, 148) LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18) LogOuter.Parent = Body Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
-local LogTitle = Instance.new("TextLabel") LogTitle.Size = UDim2.new(1, 0, 0, 20) LogTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30) LogTitle.Text = "  📋 Log" LogTitle.TextColor3 = Color3.fromRGB(160, 160, 200) LogTitle.Font = Enum.Font.GothamBold LogTitle.TextSize = 11 LogTitle.TextXAlignment = Enum.TextXAlignment.Left LogTitle.Parent = LogOuter Instance.new("UICorner", LogTitle).CornerRadius = UDim.new(0, 8)
-local LogScroll = Instance.new("ScrollingFrame") LogScroll.Size = UDim2.new(1, -6, 1, -24) LogScroll.Position = UDim2.new(0, 3, 0, 22) LogScroll.BackgroundTransparency = 1 LogScroll.ScrollBarThickness = 3 LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y LogScroll.Parent = LogOuter
-local LogLayout = Instance.new("UIListLayout") LogLayout.Padding = UDim.new(0, 1) LogLayout.Parent = LogScroll
-
--- ============================================================
--- HELPER FUNCTIONS
--- ============================================================
-local function addLog(msg, color)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -4, 0, 13)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = os.date("%H:%M:%S") .. " " .. msg
-    lbl.TextColor3 = color or Color3.fromRGB(180, 180, 180)
-    lbl.Font = Enum.Font.Code
-    lbl.TextSize = 10
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = LogScroll
-    table.insert(logLines, lbl)
-    if #logLines > MAX_LOG then logLines[1]:Destroy() table.remove(logLines, 1) end
-    task.defer(function() LogScroll.CanvasPosition = Vector2.new(0, math.huge) end)
-end
-
-local function setStatus(running)
-    if running then
-        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
-        StatusText.Text = "Status: Berjalan..." StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) ToggleBtn.Text = "⏹  HENTIKAN SCRIPT"
-    else
-        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "▶  MULAI SCRIPT"
-    end
-end
-
-local function updateCount(remaining)
-    CountText.Text = "Terkumpul: " .. collected .. "  |  Gagal: " .. failed .. "  |  Tersisa: " .. (remaining or 0)
-end
-
--- ============================================================
--- CORE LOGIC (PROMPT DETECTOR & FIRE)
--- ============================================================
-
-local function fireProximity(prompt)
-    -- Membajak Keamanan Sensor
-    prompt.RequiresLineOfSight = false
-    prompt.MaxActivationDistance = math.huge
-    
-    -- Eksekusi Utama (Mengakali executor rewel)
-    if fireproximityprompt then
-        pcall(function()
-            fireproximityprompt(prompt, 1)
-            fireproximityprompt(prompt, 0) -- Tembakan ganda untuk memastikan
-        end)
-        return
-    end
-    
-    -- Fallback kalau executor gak support fireproximityprompt
-    pcall(function()
-        prompt:InputHoldBegin()
-        task.wait((prompt.HoldDuration or 0) + 0.1)
-        prompt:InputHoldEnd()
-    end)
-end
-
-local function runCollector()
-    collected = 0
-    failed    = 0
-    addLog("Script AFK dimulai", Color3.fromRGB(100, 255, 100))
-
-    while isRunning do
-        local char = LocalPlayer.Character
-        if not char then task.wait(1) continue end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then task.wait(1) continue end
-
-        local collectables = {}
-        for _, obj in ipairs(workspace:GetChildren()) do
-            if obj.Name == "Collectable" then
-                table.insert(collectables, obj)
-            end
-        end
-
-        if #collectables == 0 then
-            updateCount(0)
-            addLog("Tunggu telur baru muncul...", Color3.fromRGB(200, 200, 200))
-            task.wait(CONFIG.ScanInterval)
-            continue
-        end
-
-        updateCount(#collectables)
-        addLog("Ditemukan " .. #collectables .. " egg", Color3.fromRGB(150, 200, 255))
-
-        for _, col in ipairs(collectables) do
-            if not isRunning then break end
-            if not col or not col.Parent then continue end
-
-            local pos = col:IsA("BasePart") and col.Position or (col:FindFirstChildWhichIsA("BasePart") and col:FindFirstChildWhichIsA("BasePart").Position)
+-- 1. Menggeledah SEMUA ProximityPrompt di seluruh dunia game
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if obj:IsA("ProximityPrompt") then
+        -- Cek apakah prompt ini menempel di objek (Parent) atau pakai sistem jarak jauh (Adornee)
+        local targetPart = obj.Adornee or obj.Parent
+        
+        if targetPart and targetPart:IsA("BasePart") then
+            local jarak = (targetPart.Position - rootPos).Magnitude
             
-            if not pos then
-                failed = failed + 1
-                addLog("⚠ Gagal ambil posisi egg", Color3.fromRGB(255, 120, 80))
-                continue
-            end
-
-            -- 1. Teleport ke Telur
-            hrp.CFrame = CFrame.new(pos + CONFIG.TeleportOffset)
-            
-            -- 2. TUNGGU LEBIH LAMA agar Client sempat me-render Prompt (PENTING!)
-            task.wait(0.4) 
-
-            -- 3. PENCARIAN REKURSIF (Sampai ke akar Attachment)
-            -- Angka "true" di belakang berarti mencari sedalam-dalamnya di objek tersebut
-            local prompt = col:FindFirstChildWhichIsA("ProximityPrompt", true)
-
-            -- Jika masih gagal (misal telurnya itu Model dan bukan Part utama)
-            if not prompt then
-                for _, descendant in ipairs(workspace:GetDescendants()) do
-                    if descendant:IsA("ProximityPrompt") then
-                        local parentPart = descendant.Parent
-                        if parentPart and parentPart:IsA("BasePart") then
-                            -- Cari sensor yang berjarak maksimal 15 stud dari posisimu
-                            if (parentPart.Position - pos).Magnitude <= 15 then
-                                prompt = descendant
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-
-            -- 4. EKSEKUSI
-            if prompt then
-                fireProximity(prompt)
-                
-                -- Hapus telurnya dari layarmu (Lokal)
-                col:Destroy()
-                
-                collected = collected + 1
-                addLog("✔ Egg #" .. collected .. " berhasil diambil", Color3.fromRGB(100, 255, 150))
-                updateCount(#collectables - collected)
-                task.wait(CONFIG.CollectDelay)
-            else
-                failed = failed + 1
-                addLog("✘ Prompt tersembunyi/hilang", Color3.fromRGB(255, 100, 100))
+            -- Jika prompt itu berada dalam radius 15 meter dari pemain
+            if jarak <= 15 then
+                print("🎯 BINGO! Sensor Ditemukan!")
+                print("📍 JALUR ASLI (PATH):", obj:GetFullName())
+                print("🔗 Menempel pada:", targetPart:GetFullName())
+                print("--------------------------------------------------")
+                promptKetemu = promptKetemu + 1
             end
         end
-
-        task.wait(CONFIG.ScanInterval)
     end
 end
 
--- ============================================================
--- GUI INTERACTION & DRAG
--- ============================================================
-ToggleBtn.MouseButton1Click:Connect(function()
-    if isRunning then
-        isRunning = false setStatus(false) addLog("Script dihentikan", Color3.fromRGB(255, 150, 80))
-    else
-        isRunning = true setStatus(true) scriptThread = task.spawn(runCollector)
+-- 2. Jika 0, berarti itu bukan ProximityPrompt asli! Kita cari UI Palsu.
+if promptKetemu == 0 then
+    print("⚠️ Peringatan: Tidak ada ProximityPrompt asli di dekatmu!")
+    print("Mencurigai penggunaan UI Kustom. Menggeledah PlayerGui...")
+    
+    local guiFolder = player:FindFirstChild("PlayerGui")
+    if guiFolder then
+        for _, gui in ipairs(guiFolder:GetDescendants()) do
+            -- Mencari UI yang namanya mengandung kata 'Prompt', 'Interact', atau 'Collect'
+            local namaLower = gui.Name:lower()
+            if gui:IsA("GuiObject") and (namaLower:match("prompt") or namaLower:match("interact") or namaLower:match("collect")) then
+                print("🕵️ MENCURIGAKAN (UI):", gui:GetFullName(), "| Tipe:", gui.ClassName)
+            end
+        end
     end
-end)
+end
 
-CloseBtn.MouseButton1Click:Connect(function() isRunning = false ScreenGui:Destroy() end)
-MinBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    local targetSize = isMinimized and UDim2.new(0, 320, 0, 38) or UDim2.new(0, 320, 0, 380)
-    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
-    task.delay(isMinimized and 0 or 0.1, function() Body.Visible = not isMinimized end)
-    MinBtn.Text = isMinimized and "▢" or "─"
-end)
-
-local dragging, dragStart, startPos
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
-end)
-
-print("[AutoEgg GUI] Loaded - Recursive Detector Fixed!")
+print("==================================================")
