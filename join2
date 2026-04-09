@@ -8,9 +8,8 @@ local MAX_PLAYERS = 1          -- Jumlah maksimal player dalam room (bermain sen
 local LOBBY_PLACE_ID = 108533757090220 
 
 -- Daftar pintu dan nomor remote-nya 
--- PENTING: Sesuaikan RemoteIndex dengan angka pintu! (Contoh di gambarmu pakai "_5")
 local DOORS = {
-    {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "5"},  -- Pintu 1 (Misal ini pintu 5)
+    {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "5"},  -- Pintu 1
     {CF = CFrame.new(96.9751129, 66.0011368, 789.898621), RemoteIndex = "6"},  -- Pintu 2
     {CF = CFrame.new(109.094376, 66.3031387, 789.898621), RemoteIndex = "7"},  -- Pintu 3
     {CF = CFrame.new(121.804642, 66.9051361, 789.898621), RemoteIndex = "8"}   -- Pintu 4
@@ -68,7 +67,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Auto Joiner Lobby V3"
+Title.Text = "Auto Joiner Lobby V4"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.GothamBold
@@ -224,7 +223,7 @@ task.spawn(function()
                 
             elseif mapPickerLobby and mapPickerLobby.Visible == true then
                 -- TAHAP 3: Karakter di pintu, UI Map muncul. 
-                -- Bypass tombol klik dengan menembak remote pembuat room secara langsung!
+                -- Tembak remote pembuat room secara langsung!
                 print("Menembak Remote Create Lobby...")
                 
                 local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
@@ -237,23 +236,36 @@ task.spawn(function()
                 task.wait(1.5) 
                 
             else
-                -- TAHAP 2: Karakter belum di pintu mana pun
+                -- TAHAP 2: Karakter belum di pintu mana pun (Pencarian Pintu)
                 for i, doorInfo in ipairs(DOORS) do
                     if not isRunning then break end
                     
                     local char = LocalPlayer.Character
                     if char and char:FindFirstChild("HumanoidRootPart") then
-                        -- Teleport ke pintu
+                        print("Mencoba Pintu: " .. doorInfo.RemoteIndex)
+                        -- 1. Teleport ke pintu
                         char.HumanoidRootPart.CFrame = doorInfo.CF
                         
-                        task.wait(1) -- Tunggu reaksi UI
+                        -- 2. Tunggu reaksi UI
+                        task.wait(1) 
                         
-                        -- Cek apakah MapPickerLobby langsung terbuka
+                        -- 3. Cek apakah MapPickerLobby langsung terbuka
                         if mapPickerLobby and mapPickerLobby.Visible == true then
-                            -- Simpan nomor remote pintu ini untuk dipakai di TAHAP 3 & 4
+                            -- Berhasil! Simpan nomor remote pintu ini untuk dipakai di TAHAP 3 & 4
                             activeRemoteSuffix = doorInfo.RemoteIndex 
-                            print("Berhasil masuk di pintu dengan RemoteIndex: " .. activeRemoteSuffix)
+                            print("Berhasil mengamankan pintu dengan RemoteIndex: " .. activeRemoteSuffix)
                             break 
+                        else
+                            -- LINGKARAN SETAN FIX:
+                            -- Jika UI tidak muncul, berarti pintu diambil orang lain atau nge-bug.
+                            -- Kita WAJIB LeaveLobby sebelum lompat ke pintu berikutnya!
+                            print("Pintu " .. doorInfo.RemoteIndex .. " gagal/penuh! Memaksa LeaveLobby...")
+                            pcall(function()
+                                ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("LeaveLobby_" .. doorInfo.RemoteIndex):InvokeServer()
+                            end)
+                            
+                            -- Beri jeda agar server memproses keluarnya kita dari antrean pintu tersebut
+                            task.wait(0.5) 
                         end
                     end
                 end
