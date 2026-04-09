@@ -1,0 +1,49 @@
+-- =========================================================
+-- [AUTO UPGRADE] GARDEN TOWER DEFENCE
+-- =========================================================
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UpgradeRemote = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("UpgradeUnit")
+local EntitiesFolder = workspace:WaitForChild("Map"):WaitForChild("Entities")
+
+-- [ SETTINGS ]
+local unitToUpgrade = "unit_tomato_plant" -- Ganti nama unit di sini jika ganti tower
+local upgradeInterval = 3 -- Cek dan upgrade setiap 3 detik
+
+print("✅ Auto-Upgrade Script Aktif untuk: " .. unitToUpgrade)
+
+while task.wait(upgradeInterval) do
+    -- Kumpulkan semua ID unit yang ada di map
+    local upgradableIDs = {}
+    
+    for _, unit in pairs(EntitiesFolder:GetChildren()) do
+        if unit.Name == unitToUpgrade then
+            -- MENGAMBIL HARTA KARUN YANG KAMU TEMUKAN:
+            local unitID = unit:GetAttribute("ID") 
+            
+            if unitID then
+                table.insert(upgradableIDs, unitID)
+            end
+        end
+    end
+
+    -- Eksekusi Upgrade untuk semua ID yang ditemukan
+    if #upgradableIDs > 0 then
+        for _, id in ipairs(upgradableIDs) do
+            -- Menggunakan task.spawn agar InvokeServer tidak membuat script berhenti/lag
+            task.spawn(function()
+                local args = {
+                    [1] = id
+                }
+                local success, err = pcall(function()
+                    UpgradeRemote:InvokeServer(unpack(args))
+                end)
+                
+                if not success then
+                    -- Jika error (misal uang tidak cukup), diamkan saja agar tidak spam di F9
+                    -- warn("Gagal upgrade ID " .. tostring(id) .. " | Error: " .. tostring(err))
+                end
+            end)
+        end
+    end
+end
