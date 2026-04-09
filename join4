@@ -7,7 +7,7 @@ local TARGET_DIF = "dif_easy"
 local MAX_PLAYERS = 1          
 local LOBBY_PLACE_ID = 108533757090220 
 
--- Daftar pintu dan nomor remote-nya (Sesuaikan RemoteIndex jika perlu)
+-- Daftar pintu (Sesuaikan RemoteIndex dengan nomor pintunya)
 local DOORS = {
     {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "5"},
     {CF = CFrame.new(96.9751129, 66.0011368, 789.898621), RemoteIndex = "6"},
@@ -27,13 +27,12 @@ local LocalPlayer = Players.LocalPlayer
 
 local activeRemoteSuffix = "8" 
 
--- UI Management 
 if CoreGui:FindFirstChild("AutoJoinerGUI") then CoreGui.AutoJoinerGUI:Destroy() end
 local ScreenGui = Instance.new("ScreenGui"); ScreenGui.Name = "AutoJoinerGUI"; ScreenGui.Parent = CoreGui
 local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 250, 0, 120); MainFrame.Position = UDim2.new(0.5, -125, 0.5, -60); MainFrame.BackgroundColor3 = Color3.fromRGB(35, 30, 40); MainFrame.Parent = ScreenGui
 local UICorner = Instance.new("UICorner"); UICorner.Parent = MainFrame
 local TopBar = Instance.new("Frame"); TopBar.Size = UDim2.new(1, 0, 0, 30); TopBar.BackgroundColor3 = Color3.fromRGB(25, 20, 30); TopBar.Parent = MainFrame
-local Title = Instance.new("TextLabel"); Title.Size = UDim2.new(1, -60, 1, 0); Title.Position = UDim2.new(0, 10, 0, 0); Title.BackgroundTransparency = 1; Title.Text = "Auto Joiner V6 (Path Fixed)"; Title.TextColor3 = Color3.fromRGB(255, 255, 255); Title.Font = Enum.Font.GothamBold; Title.TextSize = 13; Title.Parent = TopBar
+local Title = Instance.new("TextLabel"); Title.Size = UDim2.new(1, -60, 1, 0); Title.Position = UDim2.new(0, 10, 0, 0); Title.BackgroundTransparency = 1; Title.Text = "Auto Joiner V6.1 (Stable Click)"; Title.TextColor3 = Color3.fromRGB(255, 255, 255); Title.Font = Enum.Font.GothamBold; Title.TextSize = 12; Title.Parent = TopBar
 local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40); ToggleBtn.Position = UDim2.new(0.1, 0, 0.5, -20); ToggleBtn.BackgroundColor3 = isRunning and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80); ToggleBtn.Text = isRunning and "Status: ON" or "Status: OFF"; ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.Parent = MainFrame
 Instance.new("UICorner", ToggleBtn)
 
@@ -62,12 +61,13 @@ ToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- FUNGSI VIRTUAL CLICK
+-- FUNGSI VIRTUAL CLICK (Diperbarui)
 -- ==========================================
 local function virtualClick(button)
     if getconnections then
         for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
         for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
+        for _, conn in pairs(getconnections(button.MouseButton1Down)) do conn:Fire() end
     end
 end
 
@@ -75,7 +75,8 @@ end
 -- MAIN LOGIC (STATE MACHINE)
 -- ==========================================
 task.spawn(function()
-    while task.wait(0.5) do
+    -- Main loop sekarang berjalan lebih cepat (0.3 detik) agar lebih responsif membaca perubahan UI
+    while task.wait(0.3) do
         if isRunning and game.PlaceId == LOBBY_PLACE_ID then
             local pGui = LocalPlayer:FindFirstChild("PlayerGui")
             if not pGui then continue end
@@ -83,15 +84,13 @@ task.spawn(function()
             local gameGui = pGui:FindFirstChild("GameGui")
             local screen = gameGui and gameGui:FindFirstChild("Screen")
             
-            -- Melacak Path 1 (Bottom.Lobby)
             local bottom = screen and screen:FindFirstChild("Bottom")
             local bottomLobby = bottom and bottom:FindFirstChild("Lobby")
             
-            -- Melacak Path Menu (Middle.MapPickerLobby)
             local middle = screen and screen:FindFirstChild("Middle")
             local mapPickerLobby = middle and middle:FindFirstChild("MapPickerLobby")
 
-            -- Melacak Path Tombol Create Lobby (HASIL DEBUG!)
+            -- Selalu melacak ulang lokasi tombol Accept agar terhindar dari variabel kadaluarsa (stale)
             local items = mapPickerLobby and mapPickerLobby:FindFirstChild("Items")
             local frameInfo = items and items:FindFirstChild("Frame") and items.Frame:FindFirstChild("Info")
             local acceptBtn = frameInfo and frameInfo:FindFirstChild("Accept")
@@ -101,7 +100,7 @@ task.spawn(function()
                 print("Status: In Room. Menjalankan Start...")
                 local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
                 
-                -- Opsional: Mengganti map sesuai Config
+                -- Kirim setting Map & Difficulty secara manual ke server agar tidak pakai settingan default
                 pcall(function()
                     remotes:WaitForChild("LobbySetMap_" .. activeRemoteSuffix):InvokeServer(TARGET_MAP, TARGET_DIF, false)
                 end)
@@ -113,20 +112,25 @@ task.spawn(function()
                     task.wait(0.5)
                     remotes:WaitForChild("StartLobby_" .. activeRemoteSuffix):InvokeServer()
                 end)
-                task.wait(5) -- Jeda loading map
+                
+                print("Berhasil Start! Menunggu teleportasi game...")
+                task.wait(6) -- Jeda loading agar tidak spam
 
             -- STATUS 2: DI MENU PEMILIHAN MAP (MapPickerLobby Terlihat)
             elseif mapPickerLobby and mapPickerLobby.Visible == true then
                 if acceptBtn then
-                    print("Status: Picking Map. Mengeklik tombol Create Lobby...")
-                    virtualClick(acceptBtn)
+                    print("Status: Picking Map. Bersiap klik Create Lobby...")
                     
-                    -- Menunggu maksimal 3 detik agar UI Bottom.Lobby muncul
-                    local timeout = 0
-                    while mapPickerLobby.Visible == true and timeout < 30 do
-                        task.wait(0.1)
-                        timeout = timeout + 1
-                    end
+                    -- JEDA NAFAS: Beri waktu gamenya memuat fungsi tombol sebelum ditekan
+                    task.wait(0.5) 
+                    
+                    -- Lakukan Virtual Click
+                    virtualClick(acceptBtn)
+                    print("Klik Dieksekusi!")
+                    
+                    -- Jeda 1.5 detik. Jika UI belum hilang, loop utama akan mengulanginya
+                    -- dengan sangat aman tanpa memblokir sistem pencarian pintu.
+                    task.wait(1.5) 
                 end
 
             -- STATUS 3: MENCARI PINTU (Teleportasi)
@@ -141,10 +145,10 @@ task.spawn(function()
 
                         if mapPickerLobby and mapPickerLobby.Visible == true then
                             activeRemoteSuffix = door.RemoteIndex
-                            print("Berhasil mengamankan Pintu " .. activeRemoteSuffix)
+                            print("Berhasil masuk Pintu " .. activeRemoteSuffix)
                             break 
                         else
-                            -- LINGKARAN SETAN FIX: Jika gagal/penuh, LeaveLobby!
+                            -- FIX: Jika pintu penuh/bug, otomatis LeaveLobby
                             print("Pintu " .. door.RemoteIndex .. " penuh. Memaksa LeaveLobby...")
                             pcall(function()
                                 ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("LeaveLobby_" .. door.RemoteIndex):InvokeServer()
