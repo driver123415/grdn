@@ -1,5 +1,5 @@
 -- ==========================================
--- CONFIGURATION
+-- CONFIGURATION fix bug fix
 -- ==========================================
 local AUTO_START = true        
 local TARGET_MAP = "map_farm"  
