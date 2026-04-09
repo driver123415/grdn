@@ -163,6 +163,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
+--baris 6
 local args = {
 	"unit_tomato_plant",
 	{
@@ -173,8 +174,6 @@ local args = {
 	}
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
-
-
 
 -----layer 3-----
 
@@ -215,7 +214,6 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
-
 --baris 4
 local args = {
 	"unit_tomato_plant",
@@ -252,16 +250,4 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
-
----baris 6 new--------------
-local args = {
-	"unit_tomato_plant",
-	{
-		CF = CFrame.new(-332.3516845703125, 61.68030548095703, -123.1337890625--ini, 1, 0, 0, 0, 1, 0, 0, 0, 1),
-		Rotation = 0,
-		Valid = true,
-		Position = vector.create(-332.3516845703125, 61.68030548095703, -123.1337890625)
-	}
-}
-game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
