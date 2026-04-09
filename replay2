@@ -1,6 +1,7 @@
 -- ==========================================
 -- CONFIGURATION
 -- ==========================================
+print("testis123")
 local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
 
 -- ==========================================
