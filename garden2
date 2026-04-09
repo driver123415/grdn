@@ -1,0 +1,251 @@
+--game 1 : garden tomat
+
+local args = {
+	"unit_tomato_plant",--1
+	{
+		CF = CFrame.new(-332.48974609375, 61.68030548095703, -105.15811920166016, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.48974609375, 61.68030548095703, -105.15811920166016)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+local args = {
+	"unit_tomato_plant",--2
+	{
+		CF = CFrame.new(-338.4619140625, 61.68030548095703, -105.03054809570312, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-338.4619140625, 61.68030548095703, -105.03054809570312)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 1
+local args = {
+	"unit_tomato_plant",--3
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -134.24404907226562, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.26861572265625, 61.68030548095703, -134.24404907226562)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 2
+local args = {
+	"unit_tomato_plant",--4
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -131.9630126953125, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.0763854980469, 61.68030548095703, -131.9630126953125)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 3
+local args = {
+	"unit_tomato_plant",--5
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -129.72555541992188, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.27130126953125, 61.68030548095703, -129.72555541992188)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+---------------------------
+--baris 4 layer 1
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -127.57781982421875, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.2373046875, 61.68030548095703, -127.57781982421875)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 5 layer 1
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -125.37130737304688, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 6 layer 1
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-332.26861572265625, 61.68030548095703, -123.1337890625, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+------layer 2------
+
+--baris 1
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -134.24404907226562, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.26861572265625, 61.68030548095703, -134.24404907226562)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 2
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -131.9630126953125, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.0763854980469, 61.68030548095703, -131.9630126953125)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 3
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -129.72555541992188, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.27130126953125, 61.68030548095703, -129.72555541992188)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 4
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -127.57781982421875, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.26861572265625, 61.68030548095703, -134.24404907226562)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 5
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -125.37130737304688, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 6
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-330.1163024902344, 61.68030548095703, -123.1337890625, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+-----layer 3-----
+
+--baris 1
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -134.24404907226562, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.26861572265625, 61.68030548095703, -134.24404907226562)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+
+--baris 2
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -131.9630126953125, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.0763854980469, 61.68030548095703, -131.9630126953125)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 3
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -129.72555541992188, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.27130126953125, 61.68030548095703, -129.72555541992188)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 4
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -127.57781982421875, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.26861572265625, 61.68030548095703, -134.24404907226562)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 5
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -125.37130737304688, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
+
+--baris 6
+local args = {
+	"unit_tomato_plant",
+	{
+		CF = CFrame.new(-327.88763427734375, 61.68030548095703, -123.1337890625, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+		Rotation = 0,
+		Valid = true,
+		Position = vector.create(-332.1234436035156, 61.68030548095703, -125.37130737304688)
+	}
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
