@@ -10,7 +10,7 @@ local CONFIG = {
     TargetUnits     = {"unit_tomato_plant"}, -- Bebas mau diisi {"unit_tomato_plant"} atau dikosongkan
     
     WaveControl     = true, 
-    StartWave       = 10,  
+    StartWave       = 9,  
     StopWave        = 20, 
 }
 
