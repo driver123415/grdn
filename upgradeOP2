@@ -6,7 +6,7 @@
 local CONFIG = {
     AutoStart       = false,               
     UpgradeInterval = 2.0,                 
-    TargetUnits     = {"unit_tomato_plant"}, 
+    TargetUnits     = {"unit_tomato_plant", "unit_palm_tree"},
     
     WaveControl     = false, 
     StartWave       = 2,  
