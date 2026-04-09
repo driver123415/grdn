@@ -1,0 +1,34 @@
+local TargetPlaceID = 123516946198836 -- in game Ganti angka ini jika ID gamenya berbeda
+
+if game.PlaceId == TargetPlaceID then
+    task.wait(1)
+    print("Game ID cocok! Full Script Is Running...")
+    
+    local function executeScripts(scripts)
+        for _, script in ipairs(scripts) do
+            local co = coroutine.create(function()
+                -- Menggunakan pcall agar error di satu script tidak membuat script lain berhenti
+                pcall(function()
+                    loadstring(game:HttpGet(script))()
+                end)
+            end)
+            coroutine.resume(co)
+        end
+    end
+
+    local scripts = {
+        --"https://github.com/driver123415/grdn/raw/refs/heads/main/join1", --bisa gini juga weh
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/join1", --auto join
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --antiafk
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiDC1"--anti dc
+    }
+
+    executeScripts(scripts)
+else
+    -- Jika dieksekusi di game yang salah, script akan memberi tahu dan tidak menjalankan auto-farm
+    warn("Game ID tidak cocok! Script dibatalkan. Place ID saat ini: " .. tostring(game.PlaceId))
+end
