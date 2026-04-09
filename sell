@@ -1,0 +1,49 @@
+-- =========================================================
+-- [AUTO SELL] GARDEN TOWER DEFENCE
+-- =========================================================
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SellRemote = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("SellUnit")
+local EntitiesFolder = workspace:WaitForChild("Map"):WaitForChild("Entities")
+
+-- [ SETTINGS ]
+local unitToSell = "unit_tomato_plant" -- Ganti nama unit yang ingin dijual otomatis
+local sellInterval = 3 -- Cek dan jual setiap 3 detik
+
+print("✅ Auto-Sell Script Aktif untuk: " .. unitToSell)
+
+while task.wait(sellInterval) do
+    -- Kumpulkan semua ID unit yang ada di map
+    local sellableIDs = {}
+    
+    for _, unit in pairs(EntitiesFolder:GetChildren()) do
+        if unit.Name == unitToSell then
+            -- Mengambil ID rahasia dari Atribut
+            local unitID = unit:GetAttribute("ID") 
+            
+            if unitID then
+                table.insert(sellableIDs, unitID)
+            end
+        end
+    end
+
+    -- Eksekusi Sell untuk semua ID yang ditemukan
+    if #sellableIDs > 0 then
+        for _, id in ipairs(sellableIDs) do
+            -- Menggunakan task.spawn agar InvokeServer tidak membuat script lag
+            task.spawn(function()
+                local args = {
+                    [1] = id
+                }
+                local success, err = pcall(function()
+                    SellRemote:InvokeServer(unpack(args))
+                end)
+                
+                if not success then
+                    -- Jika error, diamkan saja agar tidak spam di F9 console
+                    -- warn("Gagal menjual ID " .. tostring(id) .. " | Error: " .. tostring(err))
+                end
+            end)
+        end
+    end
+end
