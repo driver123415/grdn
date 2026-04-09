@@ -1,5 +1,6 @@
 --game 1 : garden tomat
 
+wait(0.5)
 local args = {
 	"unit_tomato_plant",--1
 	{
@@ -11,6 +12,7 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
+wait(0.5)
 local args = {
 	"unit_tomato_plant",--2
 	{
@@ -24,6 +26,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 
 
 --baris 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",--3
 	{
@@ -36,6 +39,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 2
+wait(0.5)
 local args = {
 	"unit_tomato_plant",--4
 	{
@@ -48,6 +52,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 3
+wait(0.5)
 local args = {
 	"unit_tomato_plant",--5
 	{
@@ -62,6 +67,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 
 ---------------------------
 --baris 4 layer 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -75,6 +81,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 
 
 --baris 5 layer 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -87,6 +94,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 6 layer 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -101,6 +109,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 ------layer 2------
 
 --baris 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -114,6 +123,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 
 
 --baris 2
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -126,6 +136,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 3
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -137,8 +148,8 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
-
 --baris 4
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -150,8 +161,8 @@ local args = {
 }
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
-
 --baris 5
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -164,6 +175,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 6
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -178,6 +190,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 -----layer 3-----
 
 --baris 1
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -191,6 +204,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChil
 
 
 --baris 2
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -203,6 +217,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 3
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -215,6 +230,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 4
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -227,6 +243,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 5
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
@@ -239,6 +256,7 @@ local args = {
 game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions"):WaitForChild("PlaceUnit"):InvokeServer(unpack(args))
 
 --baris 6
+wait(0.5)
 local args = {
 	"unit_tomato_plant",
 	{
