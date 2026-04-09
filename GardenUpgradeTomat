@@ -9,7 +9,7 @@ local CONFIG = {
     MaxLevel        = 5,      
     TargetUnits     = {"unit_tomato_plant"}, -- Bebas mau diisi {"unit_tomato_plant"} atau dikosongkan
     
-    WaveControl     = false, 
+    WaveControl     = true, 
     StartWave       = 10,  
     StopWave        = 20, 
 }
