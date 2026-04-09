@@ -7,11 +7,12 @@ local TARGET_DIF = "dif_easy"  -- Ganti difficulty yang ingin dimainkan
 local MAX_PLAYERS = 1          -- Jumlah maksimal player dalam room (bermain sendiri = 1)
 local LOBBY_PLACE_ID = 108533757090220 
 
--- Daftar pintu dan nomor remote-nya (Ganti RemoteIndex jika pintu 1 pakai "_1", dst)
+-- Daftar pintu dan nomor remote-nya 
+-- PENTING: Sesuaikan RemoteIndex dengan angka pintu! (Contoh di gambarmu pakai "_5")
 local DOORS = {
-    {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "8"},  -- Pintu 1
-    {CF = CFrame.new(96.9751129, 66.0011368, 789.898621), RemoteIndex = "8"},  -- Pintu 2
-    {CF = CFrame.new(109.094376, 66.3031387, 789.898621), RemoteIndex = "8"},  -- Pintu 3
+    {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "5"},  -- Pintu 1 (Misal ini pintu 5)
+    {CF = CFrame.new(96.9751129, 66.0011368, 789.898621), RemoteIndex = "6"},  -- Pintu 2
+    {CF = CFrame.new(109.094376, 66.3031387, 789.898621), RemoteIndex = "7"},  -- Pintu 3
     {CF = CFrame.new(121.804642, 66.9051361, 789.898621), RemoteIndex = "8"}   -- Pintu 4
 }
 
@@ -25,7 +26,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local activeRemoteSuffix = "8" -- Variabel untuk mengingat nomor remote pintu yang sedang dimasuki
+local activeRemoteSuffix = "8" -- Variabel penyimpan memori pintu
 
 if CoreGui:FindFirstChild("AutoJoinerGUI") then
     CoreGui.AutoJoinerGUI:Destroy()
@@ -67,7 +68,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Auto Joiner Lobby V2"
+Title.Text = "Auto Joiner Lobby V3"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.GothamBold
@@ -174,18 +175,6 @@ ToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- FUNGSI VIRTUAL CLICK
--- ==========================================
-local function virtualClick(button)
-    if getconnections then
-        -- Mencoba menembak koneksi klik pada tombol tersebut
-        for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
-        for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
-        for _, conn in pairs(getconnections(button.MouseButton1Down)) do conn:Fire() end
-    end
-end
-
--- ==========================================
 -- MAIN LOGIC (BACKGROUND PROCESS)
 -- ==========================================
 task.spawn(function()
@@ -206,28 +195,16 @@ task.spawn(function()
             -- Melacak Path Menu (Middle.MapPickerLobby)
             local middle = screen and screen:FindFirstChild("Middle")
             local mapPickerLobby = middle and middle:FindFirstChild("MapPickerLobby")
-            
-            -- Melacak Path 2 (Tombol Accept)
-            local frameInfo = mapPickerLobby and mapPickerLobby:FindFirstChild("Frame") and mapPickerLobby.Frame:FindFirstChild("Info")
-            local acceptBtn = frameInfo and frameInfo:FindFirstChild("Accept")
 
             -- ==========================================================
-            -- PENGAMBILAN KEPUTUSAN BERDASARKAN STATUS UI DI LAYAR
+            -- PENGAMBILAN KEPUTUSAN
             -- ==========================================================
 
             if bottomLobby and bottomLobby.Visible == true then
-                -- TAHAP 4: Sudah di dalam Room! Eksekusi Semua Remote!
-                print("Lobby Terdeteksi! Menjalankan setup...")
+                -- TAHAP 4: UI Ruangan Sudah Terbuka! Eksekusi Sisa Remote!
+                print("Lobby Terdeteksi! Menjalankan setup player dan Start...")
                 
                 local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
-                
-                -- Opsional: Set Map & Difficulty (Karena saya perhatikan ini hilang di Tahap 4-mu, saya masukkan agar Config-nya berguna)
-                pcall(function()
-                    local args = { TARGET_MAP, TARGET_DIF, false }
-                    remotes:WaitForChild("LobbySetMap_" .. activeRemoteSuffix):InvokeServer(unpack(args))
-                end)
-                
-                task.wait(0.5)
                 
                 -- Remote 1: Set Max Players
                 pcall(function()
@@ -243,18 +220,24 @@ task.spawn(function()
                 end)
                 
                 print("Berhasil Start! Menunggu teleportasi game...")
-                task.wait(8) -- Jeda panjang agar tidak spam remote saat layar mau loading pindah Place ID
+                task.wait(8) -- Jeda panjang agar tidak spam saat mau loading pindah Place ID
                 
             elseif mapPickerLobby and mapPickerLobby.Visible == true then
-                -- TAHAP 3: Karakter sudah di pintu, menu pemilihan map muncul. Waktunya Virtual Click!
-                if acceptBtn then
-                    print("Melakukan Virtual Click pada tombol Create Lobby...")
-                    virtualClick(acceptBtn)
-                    task.wait(1.5) -- Beri waktu game untuk merespon klik dan memunculkan Bottom.Lobby
-                end
+                -- TAHAP 3: Karakter di pintu, UI Map muncul. 
+                -- Bypass tombol klik dengan menembak remote pembuat room secara langsung!
+                print("Menembak Remote Create Lobby...")
+                
+                local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
+                pcall(function()
+                    local args = { TARGET_MAP, TARGET_DIF, false }
+                    remotes:WaitForChild("LobbySetMap_" .. activeRemoteSuffix):InvokeServer(unpack(args))
+                end)
+                
+                -- Beri waktu server merespon dan memunculkan UI Bottom.Lobby
+                task.wait(1.5) 
                 
             else
-                -- TAHAP 2: Karakter belum di pintu mana pun (Atau pintu sebelumnya penuh)
+                -- TAHAP 2: Karakter belum di pintu mana pun
                 for i, doorInfo in ipairs(DOORS) do
                     if not isRunning then break end
                     
@@ -267,10 +250,10 @@ task.spawn(function()
                         
                         -- Cek apakah MapPickerLobby langsung terbuka
                         if mapPickerLobby and mapPickerLobby.Visible == true then
-                            -- Jika berhasil, kita simpan RemoteIndex pintu ini untuk dipakai di TAHAP 4 nanti
+                            -- Simpan nomor remote pintu ini untuk dipakai di TAHAP 3 & 4
                             activeRemoteSuffix = doorInfo.RemoteIndex 
                             print("Berhasil masuk di pintu dengan RemoteIndex: " .. activeRemoteSuffix)
-                            break -- Keluar dari loop pencarian pintu dan biarkan TAHAP 3 yang mengambil alih
+                            break 
                         end
                     end
                 end
