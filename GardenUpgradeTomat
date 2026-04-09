@@ -1,17 +1,17 @@
 -- ============================================================
---              AUTO UPGRADE TOWER - V10 (PURE UI RADAR) WORK
+--              AUTO UPGRADE TOWER - V11 (FINAL POLISH)
 --              Game: GARDEN TOWER DEFENCE
 -- ============================================================
 
 local CONFIG = {
-    AutoStart       = true,               
-    UpgradeInterval = 1.0,                 
+    AutoStart       = false,               
+    UpgradeInterval = 2.0,                 
     MaxLevel        = 5,      
-    TargetUnits     = {"unit_tomato_plant"}, -- Biarkan Kosong! Diisi otomatis dari ScrollingFrame
+    TargetUnits     = {"unit_tomato_plant"}, -- Bebas mau diisi {"unit_tomato_plant"} atau dikosongkan
     
     WaveControl     = false, 
-    StartWave       = 10,  
-    StopWave        = 20, 
+    StartWave       = 2,  
+    StopWave        = 18, 
 }
 
 local Players           = game:GetService("Players")
@@ -35,7 +35,7 @@ if PlayerGui:FindFirstChild("AutoUpgradeGUI") then
 end
 
 -- ============================================================
--- BUILD GUI
+-- BUILD GUI (TAMPILAN)
 -- ============================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AutoUpgradeGUI"
@@ -62,7 +62,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -100, 1, 0) 
 TitleLabel.Position = UDim2.new(0, 15, 0, 0) 
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Auto Upgrade (V10 Pure UI)" 
+TitleLabel.Text = "Auto Upgrade (V11 Final)" 
 TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255) 
 TitleLabel.Font = Enum.Font.GothamBold 
 TitleLabel.TextSize = 13 
@@ -126,7 +126,7 @@ local TargetDropdownBtn = Instance.new("TextButton")
 TargetDropdownBtn.Size = UDim2.new(1, -20, 0, 22)
 TargetDropdownBtn.Position = UDim2.new(0, 10, 0, 70)
 TargetDropdownBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-TargetDropdownBtn.Text = "📋 Pilih Unit Target (0 Terpilih)"
+TargetDropdownBtn.Text = "Sinkronisasi Data..." -- Teks Awal
 TargetDropdownBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
 TargetDropdownBtn.Font = Enum.Font.GothamBold
 TargetDropdownBtn.TextSize = 10
@@ -134,7 +134,7 @@ TargetDropdownBtn.BorderSizePixel = 0
 TargetDropdownBtn.Parent = CfgCard
 Instance.new("UICorner", TargetDropdownBtn).CornerRadius = UDim.new(0, 4)
 
--- OVERLAPPING DROPDOWN SCROLL (Z-INDEX 50)
+-- OVERLAPPING DROPDOWN SCROLL
 local DropdownMenuScroll = Instance.new("ScrollingFrame")
 DropdownMenuScroll.Size = UDim2.new(1, -20, 0, 140)
 DropdownMenuScroll.Position = UDim2.new(0, 10, 0, 95)
@@ -149,7 +149,7 @@ local DropdownMenuLayout = Instance.new("UIListLayout")
 DropdownMenuLayout.Padding = UDim.new(0, 2)
 DropdownMenuLayout.Parent = DropdownMenuScroll
 
--- Log Area (Z-Index 1 agar ditimpa oleh Dropdown)
+-- Log Area 
 local LogOuter = Instance.new("Frame") LogOuter.Size = UDim2.new(1, 0, 1, -240) LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18) LogOuter.BorderSizePixel = 0 LogOuter.ZIndex = 1 LogOuter.Parent = Body Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
 local LogTitle = Instance.new("TextLabel") LogTitle.Size = UDim2.new(1, 0, 0, 20) LogTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30) LogTitle.Text = " Console Log" LogTitle.TextColor3 = Color3.fromRGB(160, 160, 200) LogTitle.Font = Enum.Font.GothamBold LogTitle.TextSize = 11 LogTitle.TextXAlignment = Enum.TextXAlignment.Left LogTitle.BorderSizePixel = 0 LogTitle.ZIndex = 2 LogTitle.Parent = LogOuter Instance.new("UICorner", LogTitle).CornerRadius = UDim.new(0, 8)
 local LogScroll = Instance.new("ScrollingFrame") LogScroll.Size = UDim2.new(1, -6, 1, -24) LogScroll.Position = UDim2.new(0, 3, 0, 22) LogScroll.BackgroundTransparency = 1 LogScroll.ScrollBarThickness = 3 LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y LogScroll.ZIndex = 2 LogScroll.Parent = LogOuter
@@ -171,7 +171,6 @@ local function addLog(msg, color)
     task.defer(function() LogScroll.CanvasPosition = Vector2.new(0, math.huge) end)
 end
 
--- DRAG SELURUH BADAN GUI
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -212,10 +211,8 @@ end
 ToggleBtn.MouseButton1Click:Connect(toggleScript)
 
 -- ============================================================
--- FITUR: UI DATA GETTERS (PURE SCROLLING FRAME)
+-- FITUR: UI DATA GETTERS 
 -- ============================================================
-
--- MENGGUNAKAN PATH AKURAT YANG KAMU BERIKAN
 local function getUnitScrollingFrame()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     local gg = pGui and pGui:FindFirstChild("GameGui")
@@ -240,22 +237,24 @@ local function isUIMaxLevel(uiFrame)
     if lvlLabel and lvlLabel:IsA("TextLabel") then
         local txt = lvlLabel.Text 
         local numStr = string.match(txt, "%d+") 
-        if numStr then
-            local currentLevel = tonumber(numStr)
-            if currentLevel >= CONFIG.MaxLevel then return true end
-        end
+        if numStr and tonumber(numStr) >= CONFIG.MaxLevel then return true end
         if string.match(string.lower(txt), "max") then return true end
     end
     return false
 end
 
 -- ============================================================
--- FITUR: DROPDOWN TARGET (100% BACA DARI UI)
+-- FITUR: DROPDOWN TARGET & ANTI-TEMPLATE FILTER
 -- ============================================================
 local function refreshTargetBtnText()
-    if #CONFIG.TargetUnits == 0 then TargetDropdownBtn.Text = "📋 Pilih Unit Target (0 Terpilih)"
-    elseif #CONFIG.TargetUnits == 1 then TargetDropdownBtn.Text = "Target: " .. CONFIG.TargetUnits[1]
-    else TargetDropdownBtn.Text = "Target: " .. #CONFIG.TargetUnits .. " Unit Terpilih" end
+    local count = #CONFIG.TargetUnits
+    if count == 0 then
+        TargetDropdownBtn.Text = "📋 Pilih Unit Target (0 Terpilih)"
+    elseif count == 1 then
+        TargetDropdownBtn.Text = "Target: " .. CONFIG.TargetUnits[1]
+    else
+        TargetDropdownBtn.Text = "Target: " .. count .. " Unit Terpilih"
+    end
 end
 
 local function updateDropdownList()
@@ -264,12 +263,12 @@ local function updateDropdownList()
     end
     
     local uniqueUnits = {}
-    
-    -- RADAR TUNGGAL: HANYA BACA DARI SCROLLING FRAME PEMAIN
     local sf = getUnitScrollingFrame()
+    
     if sf then
         for _, child in ipairs(sf:GetChildren()) do
-            if child:IsA("Frame") and not uniqueUnits[child.Name] then
+            -- [ FIX ANTI-TEMPLATE & INVISIBLE ITEMS ]
+            if child:IsA("Frame") and child.Name ~= "Template" and child.Visible and not uniqueUnits[child.Name] then
                 uniqueUnits[child.Name] = true
             end
         end
@@ -291,9 +290,14 @@ local function updateDropdownList()
         
         btn.MouseButton1Click:Connect(function()
             local idx = table.find(CONFIG.TargetUnits, unitName)
-            if idx then table.remove(CONFIG.TargetUnits, idx) btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-            else table.insert(CONFIG.TargetUnits, unitName) btn.BackgroundColor3 = Color3.fromRGB(60, 120, 60) end
-            refreshTargetBtnText()
+            if idx then 
+                table.remove(CONFIG.TargetUnits, idx) 
+                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+            else 
+                table.insert(CONFIG.TargetUnits, unitName) 
+                btn.BackgroundColor3 = Color3.fromRGB(60, 120, 60) 
+            end
+            refreshTargetBtnText() -- [ FIX SYNCHRONIZATION ]
         end)
     end
     
@@ -378,7 +382,6 @@ function runUpgrader()
         for _, targetName in ipairs(CONFIG.TargetUnits) do
             if not isRunning then break end
             
-            -- Ambil ID fisik dari Map agar bisa di-upgrade oleh Server
             local wsUnits = {}
             for _, unit in pairs(entitiesFolder:GetChildren()) do
                 if unit.Name == targetName then
@@ -387,13 +390,11 @@ function runUpgrader()
                 end
             end
             
-            -- Ambil Status Level dari UI
             local uiFrames = {}
             for _, child in ipairs(sfUI:GetChildren()) do
                 if child.Name == targetName then table.insert(uiFrames, child) end
             end
             
-            -- Sortir mana yang sudah Max dan mana yang belum
             local toUpgradeIDs = {}
             for i = 1, #wsUnits do
                 local isMax = false
@@ -443,4 +444,7 @@ MinBtn.MouseButton1Click:Connect(function()
     task.delay(isMinimized and 0 or 0.1, function() Body.Visible = not isMinimized end)
 end)
 
-print("[Auto Upgrade V10] Pure UI Radar Loaded!")
+-- Pemanggilan Sinkronisasi Teks Awal
+refreshTargetBtnText()
+
+print("[Auto Upgrade V11] Visual Bug Fixed & Anti-Template Loaded!")
