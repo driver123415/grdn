@@ -3,7 +3,7 @@
 -- ==========================================
 local AUTO_START = true        
 local TARGET_MAP = "map_graveyard"  
-local TARGET_DIF = "dif_easy" --dif_easy, dif_normal, dif_hard, dif_insane, dif_imposible, dif_apocalypse
+local TARGET_DIF = "dif_imposible" --dif_easy, dif_normal, dif_hard, dif_insane, dif_imposible, dif_apocalypse
 local MAX_PLAYERS = 1          
 local LOBBY_PLACE_ID = 108533757090220 
 
