@@ -1,0 +1,129 @@
+-- [ KONFIGURASI ]
+local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
+
+-- [ MEMULAI SCRIPT ]
+if game.PlaceId == 123516946198836 then
+    repeat task.wait() until game:isLoaded()
+    
+    local Players = game:GetService("Players")
+    local CoreGui = game:GetService("CoreGui")
+    local player = Players.LocalPlayer
+    
+    -- Menghapus UI lama jika script di-execute ulang (mencegah duplikat GUI)
+    if CoreGui:FindFirstChild("AntiAFK_UI") then
+        CoreGui.AntiAFK_UI:Destroy()
+    end
+
+    -- [ PEMBUATAN GUI ]
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AntiAFK_UI"
+    ScreenGui.Parent = CoreGui 
+
+    -- Tombol Bulat
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, 50, 0, 50) -- Ukuran kecil
+    ToggleBtn.Position = UDim2.new(0, 15, 0.6, 0) -- Posisi kiri, tengah agak ke bawah
+    ToggleBtn.AnchorPoint = Vector2.new(0, 0.5)
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = 18
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleBtn.Active = true
+    ToggleBtn.Draggable = true -- Membuat UI bisa dipindah-pindah
+    ToggleBtn.Parent = ScreenGui
+
+    -- Membuat Tombol Menjadi Bulat
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(1, 0) -- 100% bulat
+    UICorner.Parent = ToggleBtn
+
+    -- [ LOGIKA STATE ON/OFF ]
+    local isRunning = AUTO_START
+    local lastIndex = 0
+
+    -- Fungsi untuk mengubah warna dan teks GUI
+    local function updateUI()
+        if isRunning then
+            ToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Warna Hijau
+            ToggleBtn.Text = "ON"
+        else
+            ToggleBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Warna Merah
+            ToggleBtn.Text = "OFF"
+        end
+    end
+
+    updateUI() -- Set tampilan awal sesuai AUTO_START
+
+    -- Fungsi saat GUI diklik
+    ToggleBtn.MouseButton1Click:Connect(function()
+        isRunning = not isRunning
+        updateUI()
+        
+        -- Jika dimatikan (OFF), paksa karakter berhenti di tempat saat itu juga
+        if not isRunning then
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                char.Humanoid:MoveTo(char.HumanoidRootPart.Position)
+            end
+        end
+    end)
+
+    -- [ KORDINAT TUJUAN ]
+    -- Catatan: Saya merapikan Vector3 agar hanya berisi X, Y, Z (sisa angka sebelumnya tidak terbaca oleh MoveTo)
+    local positions = {
+        Vector3.new(-348.237732, 64.9051361, -105.570724, 0.444182068, -1.75607866e-08, 0.895936549, -1.86968521e-08, 1, 2.88698931e-08, -0.895936549, -2.95746823e-08, 0.444182068), -- Tujuan a
+        Vector3.new(-319.63739, 64.9051361, -111.470901, 0.475515693, 5.07643776e-08, -0.879707217, 1.14828991e-08, 1, 6.39129425e-08, 0.879707217, -4.04931946e-08, 0.475515693), -- Tujuan b
+        Vector3.new(-316.266449, 64.9051361, -142.793442, 0.952596009, 1.67445808e-08, 0.3042382, -5.91495797e-10, 1, -5.31857118e-08, -0.3042382, 5.0484541e-08, 0.952596009), -- Tujuan 1
+        Vector3.new(-342.475739, 64.9051361, -150.773163, 0.346444517, -2.15257714e-08, 0.938070476, -2.69544875e-09, 1, 2.39423326e-08, -0.938070476, -1.08232108e-08, 0.346444517), -- Tujuan 2
+        Vector3.new(-354.05899, 64.9051361, -129.07814, -0.331177324, 1.9986528e-08, 0.943568528, -3.7418455e-09, 1, -2.24951791e-08, -0.943568528, -1.09805809e-08, -0.331177324), -- Tujuan 3
+        Vector3.new(-335.35321, 65.1551361, -122.449966, -0.977378488, 3.17073052e-08, 0.211497709, 1.90437941e-08, 1, -6.19123028e-08, -0.211497709, -5.6484037e-08, -0.977378488)  -- Tujuan 4
+    }
+
+    -- [ LOGIKA AUTO WALK ]
+    task.spawn(function()
+        while task.wait(0.5) do -- Loop utama agar script tidak pernah mati
+            if isRunning then
+                local character = player.Character
+                if character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart") then
+                    local humanoid = character.Humanoid
+
+                    -- Pilih titik tujuan secara acak (Random)
+                    local nextIndex
+                    repeat
+                        nextIndex = math.random(1, #positions)
+                    until nextIndex ~= lastIndex -- Ulangi random jika titik sama dengan tujuan sebelumnya
+
+                    lastIndex = nextIndex
+                    local targetPos = positions[nextIndex]
+
+                    -- Perintahkan jalan
+                    humanoid:MoveTo(targetPos)
+
+                    -- Tunggu sampai tujuan tercapai ATAU tombol diubah menjadi OFF
+                    local reached = false
+                    local connection = humanoid.MoveToFinished:Connect(function()
+                        reached = true
+                    end)
+
+                    -- Loop pengecekan: Selama belum sampai dan script masih ON
+                    while not reached and isRunning do
+                        task.wait(0.1)
+                    end
+
+                    -- Putuskan koneksi event agar tidak lag memori
+                    if connection then
+                        connection:Disconnect()
+                    end
+                    
+                    -- Jeda sedikit di titik tersebut sebelum lanjut jalan lagi
+                    if isRunning then
+                        task.wait(1) 
+                    end
+                end
+            end
+        end
+    end)
+    
+    print("Anti AFK UI Berhasil Dimuat!")
+else
+    print("Gagal memuat: Kamu tidak berada di game yang tepat.")
+end
