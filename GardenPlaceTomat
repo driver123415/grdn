@@ -1,6 +1,7 @@
 -- ==========================================
 -- CONFIGURATION
 -- ==========================================
+print("testtis")
 local AUTO_START = true        -- Kondisi awal saat dieksekusi
 local LOOP_DELAY = 0.1         -- Jeda waktu (detik) antar penempatan
 local WAVE_CONTROL = true      -- Nyalakan/Matikan fitur deteksi Wave otomatis
