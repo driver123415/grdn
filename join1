@@ -1,9 +1,9 @@
 -- ==========================================
--- CONFIGURATION fix bug fix Garden Seed farming join
+-- CONFIGURATION
 -- ==========================================
 local AUTO_START = true        
-local TARGET_MAP = "map_graveyard"  
-local TARGET_DIF = "dif_imposible" --dif_easy, dif_normal, dif_hard, dif_insane, dif_imposible, dif_apocalypse
+local TARGET_MAP = "map_graveyard" -- Ganti sesuai id map (contoh: map_farm, map_graveyard)
+local TARGET_DIF = "dif_impossible" -- dif_easy, dif_normal, dif_hard, dif_insane, dif_impossible, dif_apocalypse
 local MAX_PLAYERS = 1          
 local LOBBY_PLACE_ID = 108533757090220 
 
@@ -32,7 +32,7 @@ local ScreenGui = Instance.new("ScreenGui"); ScreenGui.Name = "AutoJoinerGUI"; S
 local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 250, 0, 120); MainFrame.Position = UDim2.new(0.5, -125, 0.5, -60); MainFrame.BackgroundColor3 = Color3.fromRGB(35, 30, 40); MainFrame.Parent = ScreenGui
 local UICorner = Instance.new("UICorner"); UICorner.Parent = MainFrame
 local TopBar = Instance.new("Frame"); TopBar.Size = UDim2.new(1, 0, 0, 30); TopBar.BackgroundColor3 = Color3.fromRGB(25, 20, 30); TopBar.Parent = MainFrame
-local Title = Instance.new("TextLabel"); Title.Size = UDim2.new(1, -60, 1, 0); Title.Position = UDim2.new(0, 10, 0, 0); Title.BackgroundTransparency = 1; Title.Text = "Auto Joiner V6.3 (Hybrid Fix)"; Title.TextColor3 = Color3.fromRGB(255, 255, 255); Title.Font = Enum.Font.GothamBold; Title.TextSize = 12; Title.Parent = TopBar
+local Title = Instance.new("TextLabel"); Title.Size = UDim2.new(1, -60, 1, 0); Title.Position = UDim2.new(0, 10, 0, 0); Title.BackgroundTransparency = 1; Title.Text = "Auto Joiner V6.4 (Map Fix)"; Title.TextColor3 = Color3.fromRGB(255, 255, 255); Title.Font = Enum.Font.GothamBold; Title.TextSize = 12; Title.Parent = TopBar
 local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40); ToggleBtn.Position = UDim2.new(0.1, 0, 0.5, -20); ToggleBtn.BackgroundColor3 = isRunning and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80); ToggleBtn.Text = isRunning and "Status: ON" or "Status: OFF"; ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.Parent = MainFrame
 Instance.new("UICorner", ToggleBtn)
 
@@ -64,7 +64,7 @@ end)
 -- FUNGSI VIRTUAL CLICK
 -- ==========================================
 local function virtualClick(button)
-    if getconnections then
+    if button and getconnections then
         for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
         for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
         for _, conn in pairs(getconnections(button.MouseButton1Down)) do conn:Fire() end
@@ -90,12 +90,21 @@ task.spawn(function()
             local lobbyButtons = lobbyFrame and lobbyFrame:FindFirstChild("Buttons")
             local startNowBtn = lobbyButtons and lobbyButtons:FindFirstChild("StartNow")
             
-            -- Melacak Path Menu (Middle.MapPickerLobby) dan Tombol Create
+            -- Melacak Path Menu (Middle.MapPickerLobby)
             local middle = screen and screen:FindFirstChild("Middle")
             local mapPickerLobby = middle and middle:FindFirstChild("MapPickerLobby")
             local items = mapPickerLobby and mapPickerLobby:FindFirstChild("Items")
-            local frameInfo = items and items:FindFirstChild("Frame") and items.Frame:FindFirstChild("Info")
+            local frame = items and items:FindFirstChild("Frame")
+            
+            -- Tombol Create Lobby (Accept)
+            local frameInfo = frame and frame:FindFirstChild("Info")
             local acceptBtn = frameInfo and frameInfo:FindFirstChild("Accept")
+            
+            -- Tombol Pilihan Map (Dari Debugger Baru)
+            local mapsFolder = frame and frame:FindFirstChild("Maps")
+            local scrollFrame = mapsFolder and mapsFolder:FindFirstChild("ScrollingFrame")
+            local contentFolder = scrollFrame and scrollFrame:FindFirstChild("Content")
+            local targetMapBtn = contentFolder and contentFolder:FindFirstChild(TARGET_MAP)
 
             local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
 
@@ -111,7 +120,7 @@ task.spawn(function()
                 end)
                 task.wait(0.5)
                 
-                -- Ganti Remote Start dengan VIRTUAL CLICK (Super Aman)
+                -- Klik Tombol StartNow
                 if startNowBtn then
                     print("Status: Mengeklik tombol StartNow...")
                     virtualClick(startNowBtn)
@@ -124,18 +133,28 @@ task.spawn(function()
             -- ==========================================
             elseif mapPickerLobby and mapPickerLobby.Visible == true then
                 if acceptBtn then
-                    print("Status: Picking Map. HYBRID TRIGGER diaktifkan...")
+                    print("Status: Picking Map. Memilih Map...")
                     task.wait(0.5) -- JEDA NAFAS
                     
-                    -- Lapis 1: Coba Virtual Click
+                    -- Langkah 1: KLIK TOMBOL MAP DULU
+                    if targetMapBtn then
+                        print("Mengeklik icon map: " .. TARGET_MAP)
+                        virtualClick(targetMapBtn)
+                        task.wait(0.3) -- Beri waktu sedikit agar UI pindah seleksi map
+                    else
+                        print("WARNING: Map '" .. TARGET_MAP .. "' tidak ditemukan di UI!")
+                    end
+                    
+                    -- Langkah 2: KLIK CREATE LOBBY
+                    print("Mengeklik Create Lobby...")
                     virtualClick(acceptBtn)
                     
-                    -- Lapis 2: Tembak Remote (Ini adalah Fallback kalau Virtual Click nge-bug gara-gara interupsi manual)
+                    -- Langkah 3: TEMBAK REMOTE SEBAGAI PENGAMAN (Backup)
                     pcall(function()
                         remotes:WaitForChild("LobbySetMap_" .. activeRemoteSuffix):InvokeServer(TARGET_MAP, TARGET_DIF, false)
                     end)
                     
-                    print("Hybrid Trigger Dieksekusi!")
+                    print("Setup Map Selesai!")
                     task.wait(1.5) 
                 end
 
