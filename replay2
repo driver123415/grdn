@@ -1,7 +1,6 @@
 -- ==========================================
 -- CONFIGURATION
 -- ==========================================
-print("TESTA 1")
 local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
 
 -- ==========================================
@@ -160,7 +159,7 @@ MinBtn.MouseButton1Click:Connect(function()
 end)
 
 CloseBtn.MouseButton1Click:Connect(function()
-    isRunning = false -- Matikan loop sebelum menutup
+    isRunning = false
     ScreenGui:Destroy()
 end)
 
@@ -179,9 +178,8 @@ end)
 -- MAIN LOGIC (BACKGROUND PROCESS)
 -- ==========================================
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(1) do -- Cek lebih santai setiap 1 detik
         if isRunning then
-            -- Bungkus dengan pcall agar jika terjadi error saat UI loading, loop tidak berhenti/rusak
             pcall(function()
                 local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
                 if playerGui then
@@ -193,51 +191,63 @@ task.spawn(function()
                             if middle then
                                 local gameEnd = middle:FindFirstChild("GameEnd")
                                 
-                                -- Jika UI GameEnd muncul dan Visible
+                                -- Jika layar Game Over muncul
                                 if gameEnd and gameEnd.Visible == true then
                                     
-                                    -- MENGGUNAKAN PENCARIAN REKURSIF (Jauh lebih aman dari UI yang telat load)
-                                    -- Parameter 'true' membuat script mencari ke semua lapisan di dalam GameEnd
+                                    -- Cari tombol 'Again' ke seluruh penjuru UI
                                     local btnAgain = gameEnd:FindFirstChild("Again", true)
                                     
-                                    if btnAgain and (btnAgain:IsA("ImageButton") or btnAgain:IsA("TextButton")) then
+                                    if btnAgain and btnAgain:IsA("ImageButton") then
                                         
-                                        -- Simulasi Klik Tombol
-                                        if getconnections then
-                                            for _, connection in pairs(getconnections(btnAgain.MouseButton1Click)) do
-                                                connection:Fire()
-                                            end
-                                            for _, connection in pairs(getconnections(btnAgain.Activated)) do
-                                                connection:Fire()
-                                            end
-                                        elseif firesignal then
-                                            firesignal(btnAgain.MouseButton1Click)
-                                            firesignal(btnAgain.Activated)
-                                        else
-                                            -- Virtual Input Manager (VIM) Fallback
-                                            local vim = game:GetService("VirtualInputManager")
-                                            local pos = btnAgain.AbsolutePosition
-                                            local size = btnAgain.AbsoluteSize
+                                        -- ===============================================
+                                        -- KUNCI PERBAIKAN: Tunggu 2 detik agar UI selesai loading/animasi
+                                        -- sebelum script mencoba mengkliknya.
+                                        -- ===============================================
+                                        task.wait(2)
+                                        
+                                        -- Metode 1: Simulasi Kursor Mouse Asli (Sangat Akurat)
+                                        local vim = game:GetService("VirtualInputManager")
+                                        local pos = btnAgain.AbsolutePosition
+                                        local size = btnAgain.AbsoluteSize
+                                        
+                                        -- Pastikan UI benar-benar sudah punya ukuran di layar (bukan 0)
+                                        if size.X > 0 and size.Y > 0 then
                                             vim:SendMouseButtonEvent(pos.X + size.X/2, pos.Y + size.Y/2, 0, true, game, 1)
                                             task.wait(0.1)
                                             vim:SendMouseButtonEvent(pos.X + size.X/2, pos.Y + size.Y/2, 0, false, game, 1)
                                         end
                                         
-                                        task.wait(0.5) -- Jeda sebentar setelah klik
+                                        -- Metode 2: Backup Executor (firesignal / getconnections)
+                                        pcall(function()
+                                            if firesignal then
+                                                firesignal(btnAgain.MouseButton1Click)
+                                                firesignal(btnAgain.Activated)
+                                            end
+                                            if getconnections then
+                                                for _, conn in pairs(getconnections(btnAgain.MouseButton1Click)) do
+                                                    conn:Fire()
+                                                end
+                                            end
+                                        end)
+                                        
+                                        task.wait(1)
                                         
                                         -- Jalankan Vote Difficulty
-                                        local args = { "dif_impossible" }
-                                        ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("PlaceDifficultyVote"):InvokeServer(unpack(args))
+                                        pcall(function()
+                                            local args = { "dif_impossible" }
+                                            ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("PlaceDifficultyVote"):InvokeServer(unpack(args))
+                                        end)
                                         
-                                        -- Jeda 5 detik selagi game loading ulang agar loop tidak menembak berkali-kali
-                                        task.wait(5)
+                                        -- Jeda panjang (8 detik) agar script santai dan tidak spam klik 
+                                        -- selagi game sedang proses loading restart ronde baru
+                                        task.wait(8)
                                     end
                                 end
                             end
                         end
                     end
                 end
-            end) -- Akhir dari pcall
+            end)
         end
     end
 end)
