@@ -2,7 +2,7 @@
 -- CONFIGURATION
 -- ==========================================
 local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
-
+print("kates")
 -- ==========================================
 -- VARIABLES & GUI SETUP
 -- ==========================================
