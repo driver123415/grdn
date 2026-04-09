@@ -1,0 +1,281 @@
+-- ==========================================
+-- CONFIGURATION
+-- ==========================================
+local AUTO_START = true        -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
+local TARGET_MAP = "map_farm"  -- Ganti map yang ingin dimainkan
+local TARGET_DIF = "dif_easy"  -- Ganti difficulty yang ingin dimainkan
+local MAX_PLAYERS = 1          -- Jumlah maksimal player dalam room (bermain sendiri = 1)
+local LOBBY_PLACE_ID = 108533757090220 
+
+-- Daftar pintu dan nomor remote-nya (Ganti RemoteIndex jika pintu 1 pakai "_1", dst)
+local DOORS = {
+    {CF = CFrame.new(84.8885498, 66.4031448, 789.898621), RemoteIndex = "8"},  -- Pintu 1
+    {CF = CFrame.new(96.9751129, 66.0011368, 789.898621), RemoteIndex = "8"},  -- Pintu 2
+    {CF = CFrame.new(109.094376, 66.3031387, 789.898621), RemoteIndex = "8"},  -- Pintu 3
+    {CF = CFrame.new(121.804642, 66.9051361, 789.898621), RemoteIndex = "8"}   -- Pintu 4
+}
+
+-- ==========================================
+-- VARIABLES & GUI SETUP
+-- ==========================================
+local isRunning = AUTO_START
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local activeRemoteSuffix = "8" -- Variabel untuk mengingat nomor remote pintu yang sedang dimasuki
+
+if CoreGui:FindFirstChild("AutoJoinerGUI") then
+    CoreGui.AutoJoinerGUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoJoinerGUI"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 250, 0, 120)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -60)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 30, 40)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 30)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 20, 30)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+local TopBarCover = Instance.new("Frame")
+TopBarCover.Size = UDim2.new(1, 0, 0, 8)
+TopBarCover.Position = UDim2.new(0, 0, 1, -8)
+TopBarCover.BackgroundColor3 = Color3.fromRGB(25, 20, 30)
+TopBarCover.BorderSizePixel = 0
+TopBarCover.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -60, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Auto Joiner Lobby V2"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.Parent = TopBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -30, 0, 0)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.Parent = TopBar
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -60, 0, 0)
+MinBtn.BackgroundTransparency = 1
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 18
+MinBtn.Parent = TopBar
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -30)
+ContentFrame.Position = UDim2.new(0, 0, 0, 30)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.5, -20)
+ToggleBtn.BackgroundColor3 = isRunning and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
+ToggleBtn.Text = isRunning and "Status: ON" or "Status: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 16
+ToggleBtn.Parent = ContentFrame
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleBtn
+
+-- ==========================================
+-- DRAG & BUTTON SYSTEM
+-- ==========================================
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then update(input) end
+end)
+
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        ContentFrame.Visible = false
+        MainFrame.Size = UDim2.new(0, 250, 0, 30)
+    else
+        ContentFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 250, 0, 120)
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    isRunning = false 
+    ScreenGui:Destroy()
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+        ToggleBtn.Text = "Status: ON"
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+        ToggleBtn.Text = "Status: OFF"
+    end
+end)
+
+-- ==========================================
+-- FUNGSI VIRTUAL CLICK
+-- ==========================================
+local function virtualClick(button)
+    if getconnections then
+        -- Mencoba menembak koneksi klik pada tombol tersebut
+        for _, conn in pairs(getconnections(button.MouseButton1Click)) do conn:Fire() end
+        for _, conn in pairs(getconnections(button.Activated)) do conn:Fire() end
+        for _, conn in pairs(getconnections(button.MouseButton1Down)) do conn:Fire() end
+    end
+end
+
+-- ==========================================
+-- MAIN LOGIC (BACKGROUND PROCESS)
+-- ==========================================
+task.spawn(function()
+    while task.wait(0.5) do
+        -- TAHAP 1: Pengecekan Awal
+        if isRunning and game.PlaceId == LOBBY_PLACE_ID then
+            
+            local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+            if not pGui then continue end
+            
+            local gameGui = pGui:FindFirstChild("GameGui")
+            local screen = gameGui and gameGui:FindFirstChild("Screen")
+            
+            -- Melacak Path 1 (Bottom.Lobby)
+            local bottom = screen and screen:FindFirstChild("Bottom")
+            local bottomLobby = bottom and bottom:FindFirstChild("Lobby")
+            
+            -- Melacak Path Menu (Middle.MapPickerLobby)
+            local middle = screen and screen:FindFirstChild("Middle")
+            local mapPickerLobby = middle and middle:FindFirstChild("MapPickerLobby")
+            
+            -- Melacak Path 2 (Tombol Accept)
+            local frameInfo = mapPickerLobby and mapPickerLobby:FindFirstChild("Frame") and mapPickerLobby.Frame:FindFirstChild("Info")
+            local acceptBtn = frameInfo and frameInfo:FindFirstChild("Accept")
+
+            -- ==========================================================
+            -- PENGAMBILAN KEPUTUSAN BERDASARKAN STATUS UI DI LAYAR
+            -- ==========================================================
+
+            if bottomLobby and bottomLobby.Visible == true then
+                -- TAHAP 4: Sudah di dalam Room! Eksekusi Semua Remote!
+                print("Lobby Terdeteksi! Menjalankan setup...")
+                
+                local remotes = ReplicatedStorage:WaitForChild("RemoteFunctions")
+                
+                -- Opsional: Set Map & Difficulty (Karena saya perhatikan ini hilang di Tahap 4-mu, saya masukkan agar Config-nya berguna)
+                pcall(function()
+                    local args = { TARGET_MAP, TARGET_DIF, false }
+                    remotes:WaitForChild("LobbySetMap_" .. activeRemoteSuffix):InvokeServer(unpack(args))
+                end)
+                
+                task.wait(0.5)
+                
+                -- Remote 1: Set Max Players
+                pcall(function()
+                    local args = { MAX_PLAYERS }
+                    remotes:WaitForChild("LobbySetMaxPlayers_" .. activeRemoteSuffix):InvokeServer(unpack(args))
+                end)
+                
+                task.wait(0.5)
+                
+                -- Remote 2: Start Lobby
+                pcall(function()
+                    remotes:WaitForChild("StartLobby_" .. activeRemoteSuffix):InvokeServer()
+                end)
+                
+                print("Berhasil Start! Menunggu teleportasi game...")
+                task.wait(8) -- Jeda panjang agar tidak spam remote saat layar mau loading pindah Place ID
+                
+            elseif mapPickerLobby and mapPickerLobby.Visible == true then
+                -- TAHAP 3: Karakter sudah di pintu, menu pemilihan map muncul. Waktunya Virtual Click!
+                if acceptBtn then
+                    print("Melakukan Virtual Click pada tombol Create Lobby...")
+                    virtualClick(acceptBtn)
+                    task.wait(1.5) -- Beri waktu game untuk merespon klik dan memunculkan Bottom.Lobby
+                end
+                
+            else
+                -- TAHAP 2: Karakter belum di pintu mana pun (Atau pintu sebelumnya penuh)
+                for i, doorInfo in ipairs(DOORS) do
+                    if not isRunning then break end
+                    
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        -- Teleport ke pintu
+                        char.HumanoidRootPart.CFrame = doorInfo.CF
+                        
+                        task.wait(1) -- Tunggu reaksi UI
+                        
+                        -- Cek apakah MapPickerLobby langsung terbuka
+                        if mapPickerLobby and mapPickerLobby.Visible == true then
+                            -- Jika berhasil, kita simpan RemoteIndex pintu ini untuk dipakai di TAHAP 4 nanti
+                            activeRemoteSuffix = doorInfo.RemoteIndex 
+                            print("Berhasil masuk di pintu dengan RemoteIndex: " .. activeRemoteSuffix)
+                            break -- Keluar dari loop pencarian pintu dan biarkan TAHAP 3 yang mengambil alih
+                        end
+                    end
+                end
+                
+            end
+        end
+    end
+end)
