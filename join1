@@ -2,8 +2,8 @@
 -- CONFIGURATION
 -- ==========================================
 local AUTO_START = true        
-local TARGET_MAP = "map_graveyard" -- Ganti sesuai id map (contoh: map_farm, map_graveyard)
-local TARGET_DIF = "dif_impossible" -- dif_easy, dif_normal, dif_hard, dif_insane, dif_impossible, dif_apocalypse
+local TARGET_MAP = "map_farm" -- Ganti sesuai id map (contoh: , map_graveyard)
+local TARGET_DIF = "dif_easy" -- dif_easy, dif_normal, dif_hard, dif_insane, dif_impossible, dif_apocalypse
 local MAX_PLAYERS = 1          
 local LOBBY_PLACE_ID = 108533757090220 
 
