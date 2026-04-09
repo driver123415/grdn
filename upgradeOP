@@ -1,22 +1,17 @@
 -- ============================================================
---              AUTO UPGRADE TOWER - V2 (SMART GUI)
+--              AUTO UPGRADE TOWER - V3 (ULTIMATE)
 --              Game: GARDEN TOWER DEFENCE
 -- ============================================================
 
--- ╔══════════════════════════════╗
--- ║         CONFIG AREA          ║
--- ╚══════════════════════════════╝
 local CONFIG = {
-    AutoStart         = false,               
-    UpgradeInterval   = 2.0,                 
-    TargetUnit        = "unit_tomato_plant", 
+    AutoStart       = false,               
+    UpgradeInterval = 2.0,                 
+    TargetUnits     = {"unit_tomato_plant"}, -- Sekarang menggunakan array (bisa lebih dari 1)
     
-    -- [ FITUR BARU: AUTO WAVE ]
-    EnableWaveControl = true, 
-    StartWave         = "Level 1: Wave 2 / 20",  -- Script otomatis NYALA saat wave ini
-    StopWave          = "Level 1: Wave 18 / 20", -- Script otomatis MATI saat wave ini
+    WaveControl     = false, 
+    StartWave       = 2,  
+    StopWave        = 18, 
 }
--- ============================================================
 
 local Players           = game:GetService("Players")
 local TweenService      = game:GetService("TweenService")
@@ -32,7 +27,7 @@ local scriptThread = nil
 local logLines    = {}
 local MAX_LOG     = 50
 local unitsFound  = 0
-local lastWaveText = ""
+local lastWaveNum = -1
 
 -- ─── Bersihkan GUI lama ─────────────────────────────
 if PlayerGui:FindFirstChild("AutoUpgradeGUI") then
@@ -49,15 +44,13 @@ ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 340, 0, 480) -- Diperbesar untuk fitur baru
-MainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
+MainFrame.Size = UDim2.new(0, 340, 0, 490) 
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -245)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.ClipsDescendants = true
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- [ PERBAIKAN UI: Garis aneh dihilangkan ]
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 38)
 TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
@@ -68,14 +61,13 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -100, 1, 0) 
 TitleLabel.Position = UDim2.new(0, 15, 0, 0) 
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Auto Upgrade Tower V2" 
+TitleLabel.Text = "Auto Upgrade (V3 Ultimate)" 
 TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255) 
 TitleLabel.Font = Enum.Font.GothamBold 
 TitleLabel.TextSize = 13 
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left 
 TitleLabel.Parent = TitleBar
 
--- [ PERBAIKAN UI: Tombol X dan - diperbaiki fontnya ]
 local BtnContainer = Instance.new("Frame")
 BtnContainer.Size = UDim2.new(0, 70, 0, 22) 
 BtnContainer.Position = UDim2.new(1, -80, 0.5, -11) 
@@ -99,7 +91,6 @@ end
 local MinBtn = makeWinBtn(0, Color3.fromRGB(200, 150, 40), "-")
 local CloseBtn = makeWinBtn(28, Color3.fromRGB(200, 50, 50), "X")
 
--- Body Layout
 local Body = Instance.new("Frame")
 Body.Size = UDim2.new(1, 0, 1, -38) 
 Body.Position = UDim2.new(0, 0, 0, 38) 
@@ -120,32 +111,40 @@ BodyPad.Parent = Body
 local StatusCard = Instance.new("Frame") StatusCard.Size = UDim2.new(1, 0, 0, 65) StatusCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) StatusCard.BorderSizePixel = 0 StatusCard.Parent = Body Instance.new("UICorner", StatusCard).CornerRadius = UDim.new(0, 8)
 local StatusDot = Instance.new("Frame") StatusDot.Size = UDim2.new(0, 10, 0, 10) StatusDot.Position = UDim2.new(0, 12, 0, 14) StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80) StatusDot.BorderSizePixel = 0 StatusDot.Parent = StatusCard Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 local StatusText = Instance.new("TextLabel") StatusText.Size = UDim2.new(1, -100, 0, 18) StatusText.Position = UDim2.new(0, 30, 0, 10) StatusText.BackgroundTransparency = 1 StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200) StatusText.Font = Enum.Font.GothamBold StatusText.TextSize = 13 StatusText.TextXAlignment = Enum.TextXAlignment.Left StatusText.Parent = StatusCard
-local CountText = Instance.new("TextLabel") CountText.Size = UDim2.new(1, -30, 0, 14) CountText.Position = UDim2.new(0, 30, 0, 30) CountText.BackgroundTransparency = 1 CountText.Text = "Unit Ditemukan: 0" CountText.TextColor3 = Color3.fromRGB(120, 120, 150) CountText.Font = Enum.Font.Gotham CountText.TextSize = 10 CountText.TextXAlignment = Enum.TextXAlignment.Left CountText.Parent = StatusCard
+local CountText = Instance.new("TextLabel") CountText.Size = UDim2.new(1, -30, 0, 14) CountText.Position = UDim2.new(0, 30, 0, 30) CountText.BackgroundTransparency = 1 CountText.Text = "Total Unit Target: 0" CountText.TextColor3 = Color3.fromRGB(120, 120, 150) CountText.Font = Enum.Font.Gotham CountText.TextSize = 10 CountText.TextXAlignment = Enum.TextXAlignment.Left CountText.Parent = StatusCard
 local WaveTextDisplay = Instance.new("TextLabel") WaveTextDisplay.Size = UDim2.new(1, -30, 0, 14) WaveTextDisplay.Position = UDim2.new(0, 30, 0, 46) WaveTextDisplay.BackgroundTransparency = 1 WaveTextDisplay.Text = "Wave: Mendeteksi..." WaveTextDisplay.TextColor3 = Color3.fromRGB(150, 200, 255) WaveTextDisplay.Font = Enum.Font.GothamBold WaveTextDisplay.TextSize = 10 WaveTextDisplay.TextXAlignment = Enum.TextXAlignment.Left WaveTextDisplay.Parent = StatusCard
 
 -- Toggle Button
 local ToggleBtn = Instance.new("TextButton") ToggleBtn.Size = UDim2.new(1, 0, 0, 38) ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "MULAI UPGRADE" ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ToggleBtn.Font = Enum.Font.GothamBold ToggleBtn.TextSize = 13 ToggleBtn.BorderSizePixel = 0 ToggleBtn.Parent = Body Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- Config Card
-local CfgCard = Instance.new("Frame") CfgCard.Size = UDim2.new(1, 0, 0, 85) CfgCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) CfgCard.BorderSizePixel = 0 CfgCard.Parent = Body Instance.new("UICorner", CfgCard).CornerRadius = UDim.new(0, 8)
-local CfgTitle = Instance.new("TextLabel") CfgTitle.Size = UDim2.new(1, -10, 0, 18) CfgTitle.Position = UDim2.new(0, 10, 0, 5) CfgTitle.BackgroundTransparency = 1 CfgTitle.Text = "Pengaturan" CfgTitle.TextColor3 = Color3.fromRGB(180, 180, 220) CfgTitle.Font = Enum.Font.GothamBold CfgTitle.TextSize = 11 CfgTitle.TextXAlignment = Enum.TextXAlignment.Left CfgTitle.Parent = CfgCard
+-- Config Card (Diperbesar untuk Input TextBox)
+local CfgCard = Instance.new("Frame") CfgCard.Size = UDim2.new(1, 0, 0, 120) CfgCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32) CfgCard.BorderSizePixel = 0 CfgCard.Parent = Body Instance.new("UICorner", CfgCard).CornerRadius = UDim.new(0, 8)
+local CfgTitle = Instance.new("TextLabel") CfgTitle.Size = UDim2.new(1, -10, 0, 18) CfgTitle.Position = UDim2.new(0, 10, 0, 5) CfgTitle.BackgroundTransparency = 1 CfgTitle.Text = "Pengaturan Lanjutan" CfgTitle.TextColor3 = Color3.fromRGB(180, 180, 220) CfgTitle.Font = Enum.Font.GothamBold CfgTitle.TextSize = 11 CfgTitle.TextXAlignment = Enum.TextXAlignment.Left CfgTitle.Parent = CfgCard
 
 local DelayLabel = Instance.new("TextLabel") DelayLabel.Size = UDim2.new(0.5, -5, 0, 18) DelayLabel.Position = UDim2.new(0, 10, 0, 26) DelayLabel.BackgroundTransparency = 1 DelayLabel.Text = "Interval: " .. CONFIG.UpgradeInterval .. "s" DelayLabel.TextColor3 = Color3.fromRGB(140, 140, 170) DelayLabel.Font = Enum.Font.Gotham DelayLabel.TextSize = 10 DelayLabel.TextXAlignment = Enum.TextXAlignment.Left DelayLabel.Parent = CfgCard
 local function makeSmallBtn(xOff, label, parent)
     local b = Instance.new("TextButton") b.Size = UDim2.new(0, 22, 0, 18) b.Position = xOff b.BackgroundColor3 = Color3.fromRGB(35, 35, 50) b.Text = label b.TextColor3 = Color3.fromRGB(200, 200, 255) b.Font = Enum.Font.GothamBold b.TextSize = 12 b.BorderSizePixel = 0 b.Parent = parent Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4) return b
 end
-local DelayMinus = makeSmallBtn(UDim2.new(0.5, 5,  0, 26), "-", CfgCard)
-local DelayPlus  = makeSmallBtn(UDim2.new(0.5, 30, 0, 26), "+", CfgCard)
+local DelayMinus = makeSmallBtn(UDim2.new(0, 100), "-", CfgCard)
+local DelayPlus  = makeSmallBtn(UDim2.new(0, 125), "+", CfgCard)
+DelayMinus.Position = UDim2.new(0.5, 5, 0, 26) DelayPlus.Position = UDim2.new(0.5, 30, 0, 26)
 
--- [ PERBAIKAN UI: AutoStart Teks Aman ]
-local AutoStartLabel = Instance.new("TextLabel") AutoStartLabel.Size = UDim2.new(0.7, 0, 0, 18) AutoStartLabel.Position = UDim2.new(0, 10, 0, 44) AutoStartLabel.BackgroundTransparency = 1 AutoStartLabel.Text = "AutoStart: " .. (CONFIG.AutoStart and "[ON]" or "[OFF]") AutoStartLabel.TextColor3 = CONFIG.AutoStart and Color3.fromRGB(100,220,100) or Color3.fromRGB(180,80,80) AutoStartLabel.Font = Enum.Font.GothamBold AutoStartLabel.TextSize = 10 AutoStartLabel.TextXAlignment = Enum.TextXAlignment.Left AutoStartLabel.Parent = CfgCard
+-- WAVE CONTROL GUI (TextBox)
+local WaveControlToggle = Instance.new("TextButton")
+WaveControlToggle.Size = UDim2.new(0.4, 0, 0, 18) WaveControlToggle.Position = UDim2.new(0, 10, 0, 48) WaveControlToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50) WaveControlToggle.Text = "Wave Auto: [OFF]" WaveControlToggle.TextColor3 = Color3.fromRGB(200, 100, 100) WaveControlToggle.Font = Enum.Font.GothamBold WaveControlToggle.TextSize = 10 WaveControlToggle.BorderSizePixel = 0 WaveControlToggle.Parent = CfgCard Instance.new("UICorner", WaveControlToggle).CornerRadius = UDim.new(0, 4)
 
--- [ FITUR BARU: Dropdown Target Unit ]
+local StartWaveLabel = Instance.new("TextLabel") StartWaveLabel.Size = UDim2.new(0, 40, 0, 18) StartWaveLabel.Position = UDim2.new(0.45, 5, 0, 48) StartWaveLabel.BackgroundTransparency = 1 StartWaveLabel.Text = "Start:" StartWaveLabel.TextColor3 = Color3.fromRGB(150, 150, 150) StartWaveLabel.Font = Enum.Font.Gotham StartWaveLabel.TextSize = 10 StartWaveLabel.Parent = CfgCard
+local StartWaveBox = Instance.new("TextBox") StartWaveBox.Size = UDim2.new(0, 30, 0, 18) StartWaveBox.Position = UDim2.new(0.45, 40, 0, 48) StartWaveBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40) StartWaveBox.Text = tostring(CONFIG.StartWave) StartWaveBox.TextColor3 = Color3.fromRGB(255, 255, 255) StartWaveBox.Font = Enum.Font.GothamBold StartWaveBox.TextSize = 10 StartWaveBox.Parent = CfgCard Instance.new("UICorner", StartWaveBox).CornerRadius = UDim.new(0, 4)
+
+local StopWaveLabel = Instance.new("TextLabel") StopWaveLabel.Size = UDim2.new(0, 35, 0, 18) StopWaveLabel.Position = UDim2.new(0.45, 80, 0, 48) StopWaveLabel.BackgroundTransparency = 1 StopWaveLabel.Text = "Stop:" StopWaveLabel.TextColor3 = Color3.fromRGB(150, 150, 150) StopWaveLabel.Font = Enum.Font.Gotham StopWaveLabel.TextSize = 10 StopWaveLabel.Parent = CfgCard
+local StopWaveBox = Instance.new("TextBox") StopWaveBox.Size = UDim2.new(0, 30, 0, 18) StopWaveBox.Position = UDim2.new(0.45, 115, 0, 48) StopWaveBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40) StopWaveBox.Text = tostring(CONFIG.StopWave) StopWaveBox.TextColor3 = Color3.fromRGB(255, 255, 255) StopWaveBox.Font = Enum.Font.GothamBold StopWaveBox.TextSize = 10 StopWaveBox.Parent = CfgCard Instance.new("UICorner", StopWaveBox).CornerRadius = UDim.new(0, 4)
+
+-- TARGET MULTI-SELECT DROPDOWN
 local TargetDropdownBtn = Instance.new("TextButton")
-TargetDropdownBtn.Size = UDim2.new(1, -20, 0, 20)
-TargetDropdownBtn.Position = UDim2.new(0, 10, 0, 60)
+TargetDropdownBtn.Size = UDim2.new(1, -20, 0, 22)
+TargetDropdownBtn.Position = UDim2.new(0, 10, 0, 75)
 TargetDropdownBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-TargetDropdownBtn.Text = "Target: " .. CONFIG.TargetUnit
+TargetDropdownBtn.Text = "📋 Pilih Unit Target (Klik Disini)"
 TargetDropdownBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
 TargetDropdownBtn.Font = Enum.Font.GothamBold
 TargetDropdownBtn.TextSize = 10
@@ -153,10 +152,9 @@ TargetDropdownBtn.BorderSizePixel = 0
 TargetDropdownBtn.Parent = CfgCard
 Instance.new("UICorner", TargetDropdownBtn).CornerRadius = UDim.new(0, 4)
 
--- Dropdown List (Hidden)
 local DropdownScroll = Instance.new("ScrollingFrame")
-DropdownScroll.Size = UDim2.new(1, -20, 0, 80)
-DropdownScroll.Position = UDim2.new(0, 10, 0, 82) -- Muncul di bawah tombol
+DropdownScroll.Size = UDim2.new(1, -20, 0, 100)
+DropdownScroll.Position = UDim2.new(0, 10, 0, 100) 
 DropdownScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 DropdownScroll.BorderSizePixel = 0
 DropdownScroll.ZIndex = 10
@@ -168,7 +166,7 @@ DropdownLayout.Padding = UDim.new(0, 2)
 DropdownLayout.Parent = DropdownScroll
 
 -- Log Area
-local LogOuter = Instance.new("Frame") LogOuter.Size = UDim2.new(1, 0, 1, -210) LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18) LogOuter.BorderSizePixel = 0 LogOuter.Parent = Body Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
+local LogOuter = Instance.new("Frame") LogOuter.Size = UDim2.new(1, 0, 1, -245) LogOuter.BackgroundColor3 = Color3.fromRGB(12, 12, 18) LogOuter.BorderSizePixel = 0 LogOuter.Parent = Body Instance.new("UICorner", LogOuter).CornerRadius = UDim.new(0, 8)
 local LogTitle = Instance.new("TextLabel") LogTitle.Size = UDim2.new(1, 0, 0, 20) LogTitle.BackgroundColor3 = Color3.fromRGB(20, 20, 30) LogTitle.Text = " Console Log" LogTitle.TextColor3 = Color3.fromRGB(160, 160, 200) LogTitle.Font = Enum.Font.GothamBold LogTitle.TextSize = 11 LogTitle.TextXAlignment = Enum.TextXAlignment.Left LogTitle.BorderSizePixel = 0 LogTitle.Parent = LogOuter Instance.new("UICorner", LogTitle).CornerRadius = UDim.new(0, 8)
 local LogScroll = Instance.new("ScrollingFrame") LogScroll.Size = UDim2.new(1, -6, 1, -24) LogScroll.Position = UDim2.new(0, 3, 0, 22) LogScroll.BackgroundTransparency = 1 LogScroll.ScrollBarThickness = 3 LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y LogScroll.Parent = LogOuter
 local LogLayout = Instance.new("UIListLayout") LogLayout.Padding = UDim.new(0, 1) LogLayout.Parent = LogScroll
@@ -210,7 +208,7 @@ end
 ToggleBtn.MouseButton1Click:Connect(toggleScript)
 
 -- ============================================================
--- FITUR BARU: AUTO WAVE DETECTOR & TOGGLE
+-- FITUR BARU: AUTO WAVE DETECTOR MATEMATIS
 -- ============================================================
 local function getWaveText()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
@@ -235,32 +233,67 @@ end
 
 task.spawn(function()
     while task.wait(1) do
-        local curWave = getWaveText()
+        local curWaveText = getWaveText()
         
-        -- [ PERBAIKAN BLINKING FIX ]: Hanya update jika ada teks baru
-        if curWave and curWave ~= "" and curWave ~= lastWaveText then
-            lastWaveText = curWave
-            WaveTextDisplay.Text = "Wave: " .. curWave
+        if curWaveText and curWaveText ~= "" then
+            WaveTextDisplay.Text = "Wave: " .. curWaveText
             
-            -- Eksekusi logika On/Off berdasarkan Config
-            if CONFIG.EnableWaveControl then
-                if curWave == CONFIG.StartWave and not isRunning then
-                    addLog("🎯 Auto-Start dipicu oleh Wave!", Color3.fromRGB(100, 255, 100))
-                    toggleScript()
-                elseif curWave == CONFIG.StopWave and isRunning then
-                    addLog("🛑 Auto-Stop dipicu oleh Wave!", Color3.fromRGB(255, 100, 100))
-                    toggleScript()
+            -- Ekstrak angka murni dari string (Contoh "Level 1: Wave 9 / 20" -> diambil angka 9)
+            local extractedNumStr = string.match(curWaveText, "Wave%s*(%d+)")
+            if extractedNumStr then
+                local currentWaveNum = tonumber(extractedNumStr)
+                
+                -- Hanya proses jika wave berganti
+                if currentWaveNum ~= lastWaveNum then
+                    lastWaveNum = currentWaveNum
+                    
+                    if CONFIG.WaveControl then
+                        if currentWaveNum == CONFIG.StartWave and not isRunning then
+                            addLog("🎯 Wave " .. currentWaveNum .. " Tercapai! Auto-Start ON", Color3.fromRGB(100, 255, 100))
+                            toggleScript()
+                        elseif currentWaveNum == CONFIG.StopWave and isRunning then
+                            addLog("🛑 Wave " .. currentWaveNum .. " Tercapai! Auto-Stop ON", Color3.fromRGB(255, 100, 100))
+                            toggleScript()
+                        end
+                    end
                 end
             end
         end
     end
 end)
 
+-- Update Config Wave dari TextBox GUI
+StartWaveBox.FocusLost:Connect(function()
+    local num = tonumber(StartWaveBox.Text)
+    if num then CONFIG.StartWave = num else StartWaveBox.Text = tostring(CONFIG.StartWave) end
+end)
+StopWaveBox.FocusLost:Connect(function()
+    local num = tonumber(StopWaveBox.Text)
+    if num then CONFIG.StopWave = num else StopWaveBox.Text = tostring(CONFIG.StopWave) end
+end)
+WaveControlToggle.MouseButton1Click:Connect(function()
+    CONFIG.WaveControl = not CONFIG.WaveControl
+    if CONFIG.WaveControl then
+        WaveControlToggle.Text = "Wave Auto: [ON]" WaveControlToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        WaveControlToggle.Text = "Wave Auto: [OFF]" WaveControlToggle.TextColor3 = Color3.fromRGB(200, 100, 100)
+    end
+end)
+
 -- ============================================================
--- FITUR BARU: DROPDOWN TARGET OTOMATIS
+-- FITUR BARU: DROPDOWN MULTI-TARGET & PRIORITAS
 -- ============================================================
+local function refreshTargetBtnText()
+    if #CONFIG.TargetUnits == 0 then
+        TargetDropdownBtn.Text = "📋 Pilih Unit Target (0 Terpilih)"
+    elseif #CONFIG.TargetUnits == 1 then
+        TargetDropdownBtn.Text = "Target: " .. CONFIG.TargetUnits[1]
+    else
+        TargetDropdownBtn.Text = "Target: " .. #CONFIG.TargetUnits .. " Unit Terpilih"
+    end
+end
+
 local function updateDropdownList()
-    -- Bersihkan list lama
     for _, child in ipairs(DropdownScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -271,31 +304,36 @@ local function updateDropdownList()
     
     if entitiesFolder then
         for _, unit in ipairs(entitiesFolder:GetChildren()) do
-            if unit:IsA("Model") and not uniqueUnits[unit.Name] then
+            -- Abaikan border/objek aneh, hanya ambil yang awalan "unit_" atau "enemy_" yang model
+            if not uniqueUnits[unit.Name] and (unit.Name:match("unit_") or unit:FindFirstChild("HumanoidRootPart") or unit:GetAttribute("ID")) then
                 uniqueUnits[unit.Name] = true
+                
+                local isSelected = table.find(CONFIG.TargetUnits, unit.Name) ~= nil
                 
                 local btn = Instance.new("TextButton")
                 btn.Size = UDim2.new(1, 0, 0, 20)
-                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+                btn.BackgroundColor3 = isSelected and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(40, 40, 55)
                 btn.Text = unit.Name
-                btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
                 btn.Font = Enum.Font.Gotham
                 btn.TextSize = 10
                 btn.BorderSizePixel = 0
                 btn.Parent = DropdownScroll
                 
                 btn.MouseButton1Click:Connect(function()
-                    CONFIG.TargetUnit = unit.Name
-                    TargetDropdownBtn.Text = "Target: " .. unit.Name
-                    DropdownScroll.Visible = false
-                    CfgCard.Size = UDim2.new(1, 0, 0, 85) -- Kembalikan ukuran card
-                    addLog("Target diubah ke: " .. unit.Name, Color3.fromRGB(255, 200, 100))
+                    local idx = table.find(CONFIG.TargetUnits, unit.Name)
+                    if idx then
+                        table.remove(CONFIG.TargetUnits, idx)
+                        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+                    else
+                        table.insert(CONFIG.TargetUnits, unit.Name)
+                        btn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+                    end
+                    refreshTargetBtnText()
                 end)
             end
         end
     end
-    
-    -- Sesuaikan tinggi canvas
     DropdownScroll.CanvasSize = UDim2.new(0, 0, 0, DropdownLayout.AbsoluteContentSize.Y)
 end
 
@@ -303,50 +341,60 @@ TargetDropdownBtn.MouseButton1Click:Connect(function()
     DropdownScroll.Visible = not DropdownScroll.Visible
     if DropdownScroll.Visible then
         updateDropdownList()
-        CfgCard.Size = UDim2.new(1, 0, 0, 170) -- Perbesar card untuk menampilkan dropdown
+        CfgCard.Size = UDim2.new(1, 0, 0, 210) 
+        MainFrame.ClipsDescendants = false -- Penting agar dropdown tidak terpotong ke bawah
     else
-        CfgCard.Size = UDim2.new(1, 0, 0, 85)
+        CfgCard.Size = UDim2.new(1, 0, 0, 120)
+        MainFrame.ClipsDescendants = true
     end
 end)
 
 -- ============================================================
--- CORE LOGIC (AUTO UPGRADE)
+-- CORE LOGIC (AUTO UPGRADE DENGAN ANTRIAN PRIORITAS)
 -- ============================================================
 local UpgradeRemote = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("UpgradeUnit")
 
 function runUpgrader()
-    addLog("Sistem Auto-Upgrade Aktif!", Color3.fromRGB(100, 255, 100))
+    addLog("Mulai Sistem Prioritas Upgrade!", Color3.fromRGB(100, 255, 100))
 
     while isRunning do
         local mapFolder = workspace:FindFirstChild("Map")
         local entitiesFolder = mapFolder and mapFolder:FindFirstChild("Entities")
         
-        if not entitiesFolder then
+        if not entitiesFolder or #CONFIG.TargetUnits == 0 then
             task.wait(CONFIG.UpgradeInterval)
             continue
         end
 
-        local upgradableIDs = {}
-        for _, unit in pairs(entitiesFolder:GetChildren()) do
-            if unit.Name == CONFIG.TargetUnit then
-                local unitID = unit:GetAttribute("ID") 
-                if unitID then table.insert(upgradableIDs, unitID) end
+        local totalFound = 0
+        
+        -- SISTEM PRIORITAS: Script mengeksekusi urut berdasarkan TargetUnits array
+        for _, targetName in ipairs(CONFIG.TargetUnits) do
+            if not isRunning then break end
+            
+            local currentUnitIDs = {}
+            for _, unit in pairs(entitiesFolder:GetChildren()) do
+                if unit.Name == targetName then
+                    local unitID = unit:GetAttribute("ID") 
+                    if unitID then table.insert(currentUnitIDs, unitID) end
+                end
+            end
+            
+            totalFound = totalFound + #currentUnitIDs
+            
+            -- Eksekusi upgrade untuk unit ini terlebih dahulu
+            if #currentUnitIDs > 0 then
+                addLog("Upgrading ["..targetName.."] ("..#currentUnitIDs.." unit)", Color3.fromRGB(100, 200, 255))
+                for _, id in ipairs(currentUnitIDs) do
+                    if not isRunning then break end
+                    task.spawn(function()
+                        pcall(function() UpgradeRemote:InvokeServer(id) end)
+                    end)
+                end
             end
         end
 
-        unitsFound = #upgradableIDs
-        CountText.Text = "Unit Ditemukan: " .. unitsFound
-
-        if unitsFound > 0 then
-            addLog("Mengirim sinyal upgrade ke " .. unitsFound .. " unit...", Color3.fromRGB(100, 200, 255))
-            for _, id in ipairs(upgradableIDs) do
-                if not isRunning then break end
-                task.spawn(function()
-                    pcall(function() UpgradeRemote:InvokeServer(id) end)
-                end)
-            end
-        end
-
+        CountText.Text = "Total Unit Target: " .. totalFound
         task.wait(CONFIG.UpgradeInterval)
     end
 end
@@ -358,17 +406,15 @@ DelayMinus.MouseButton1Click:Connect(function()
     CONFIG.UpgradeInterval = math.max(0.5, math.floor((CONFIG.UpgradeInterval - 0.5) * 10 + 0.5) / 10)
     DelayLabel.Text = "Interval: " .. CONFIG.UpgradeInterval .. "s"
 end)
-
 DelayPlus.MouseButton1Click:Connect(function()
     CONFIG.UpgradeInterval = math.floor((CONFIG.UpgradeInterval + 0.5) * 10 + 0.5) / 10
     DelayLabel.Text = "Interval: " .. CONFIG.UpgradeInterval .. "s"
 end)
 
 CloseBtn.MouseButton1Click:Connect(function() isRunning = false ScreenGui:Destroy() end)
-
 MinBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
-    local targetSize = isMinimized and UDim2.new(0, 340, 0, 38) or UDim2.new(0, 340, 0, 480)
+    local targetSize = isMinimized and UDim2.new(0, 340, 0, 38) or UDim2.new(0, 340, 0, 490)
     TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
     task.delay(isMinimized and 0 or 0.1, function() Body.Visible = not isMinimized end)
 end)
@@ -389,14 +435,9 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
--- ============================================================
--- AUTO START INITIALIZATION
--- ============================================================
+refreshTargetBtnText()
 if CONFIG.AutoStart then
-    addLog("AutoStart ON, menjalankan script...", Color3.fromRGB(255, 220, 50))
+    addLog("AutoStart ON, memaksa mulai...", Color3.fromRGB(255, 220, 50))
     toggleScript()
-else
-    addLog("Script V2 siap.", Color3.fromRGB(150, 150, 200))
 end
-
-print("[Auto Upgrade GUI V2] Script Terpasang Sukses!")
+print("[Auto Upgrade GUI V3] Script Terpasang Sukses!")
