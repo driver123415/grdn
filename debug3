@@ -1,0 +1,69 @@
+-- =========================================================
+-- ADVANCED UI CLICK DEBUGGER (DYNAMIC TRACER)
+-- =========================================================
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Mencegah script dobel jika dieksekusi berkali-kali
+if _G.UIClickDebuggerConnection then
+    _G.UIClickDebuggerConnection:Disconnect()
+end
+
+-- Fungsi untuk menyusun Path dengan sangat rapi
+local function getFullPath(obj)
+    local path = obj.Name
+    local current = obj.Parent
+    
+    while current and current ~= game do
+        if string.match(current.Name, "%s") then
+            path = '["' .. current.Name .. '"].' .. path
+        else
+            path = current.Name .. "." .. path
+        end
+        current = current.Parent
+    end
+    
+    return path
+end
+
+print("========================================")
+print("🟢 ADVANCED UI DEBUGGER AKTIF!")
+print("Silakan klik tombol apa saja di layar, lalu cek console ini.")
+print("========================================")
+
+-- Menyadap setiap input dari Mouse atau Touch (Layar HP)
+_G.UIClickDebuggerConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        
+        -- Mengambil posisi persis di mana kamu mengeklik
+        local posX = input.Position.X
+        local posY = input.Position.Y
+        
+        -- Memindai semua UI yang bertumpuk tepat di titik klik tersebut
+        local guiObjects = playerGui:GetGuiObjectsAtPosition(posX, posY)
+        
+        if #guiObjects > 0 then
+            print("\n🖱️ --- DETEKSI KLIK PADA KOORDINAT (" .. math.floor(posX) .. ", " .. math.floor(posY) .. ") ---")
+            
+            -- Menampilkan maksimal 4 lapisan teratas agar console tidak spam/lag
+            local maxLayers = math.min(#guiObjects, 4)
+            
+            for i = 1, maxLayers do
+                local obj = guiObjects[i]
+                print("➡️ LAPISAN " .. i .. " : " .. obj.Name)
+                print("   Tipe Kelas : " .. obj.ClassName)
+                print("   Path Penuh : " .. getFullPath(obj))
+                
+                -- Jika punya teks, tampilkan teksnya
+                if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                    print("   Isi Teks   : '" .. tostring(obj.Text) .. "'")
+                end
+                print("----------------------------------------")
+            end
+            print("========================================")
+        end
+    end
+end)
