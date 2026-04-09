@@ -1,8 +1,6 @@
 -- ==========================================
 -- CONFIGURATION
 -- ==========================================
-print("testis12334")
-
 local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kali dieksekusi
 
 -- ==========================================
@@ -11,7 +9,6 @@ local AUTO_START = true -- Ubah ke false jika ingin script mati saat pertama kal
 local isRunning = AUTO_START
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -27,7 +24,8 @@ ScreenGui.Parent = CoreGui
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 250, 0, 120)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -60)
+-- Posisi diubah ke Paling Kanan, Tengah
+MainFrame.Position = UDim2.new(1, -260, 0.5, -60) 
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -182,6 +180,7 @@ end)
 task.spawn(function()
     while task.wait(0.5) do
         if isRunning then
+            -- Melacak Path secara aman menggunakan FindFirstChild agar terhindar dari error
             local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
             if playerGui then
                 local gameGui = playerGui:FindFirstChild("GameGui")
@@ -192,28 +191,35 @@ task.spawn(function()
                         if middle then
                             local gameEnd = middle:FindFirstChild("GameEnd")
                             
-                            -- Jika UI ditemukan dan Visible = true
+                            -- Jika UI GameEnd ditemukan dan sedang Visible (muncul di layar)
                             if gameEnd and gameEnd.Visible == true then
                                 
-                                -- [ IDE KAMU DI SINI ]: Langsung matikan visibilitas UI-nya secara instan
-                                gameEnd.Visible = false
+                                -- Mencari path tombol "Again" dengan aman
+                                local items = gameEnd:FindFirstChild("Items")
+                                local frame = items and items:FindFirstChild("Frame")
+                                local actions = frame and frame:FindFirstChild("Actions")
+                                local actionsItems = actions and actions:FindFirstChild("Items")
+                                local againBtn = actionsItems and actionsItems:FindFirstChild("Again")
                                 
-                                -- 1. Jalankan remote RestartGame di background
-                                pcall(function()
-                                    ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("RestartGame"):InvokeServer()
-                                end)
+                                if againBtn then
+                                    -- Menjalankan referensi klik getconnections milikmu
+                                    local Connections = {"Activated", "MouseButton1Click", "MouseButton1Down"}
+                                    for _, connectionType in next, Connections do
+                                        pcall(function() -- Dibungkus pcall agar script tidak putus jika ada error executor
+                                            if againBtn[connectionType] then
+                                                for _, conn in next, getconnections(againBtn[connectionType]) do
+                                                    conn:Fire()
+                                                end
+                                            end
+                                        end)
+                                    end
+                                    
+                                    -- Jeda 3 detik setelah mencoba klik. 
+                                    -- Jika centang belum masuk (atau UI gagal tertutup/restart), 
+                                    -- loop akan kembali ke atas dan mengulangi klik pada tombol tersebut.
+                                    task.wait(3)
+                                end
                                 
-                                -- 2. Jeda 0.5 detik
-                                task.wait(0.5)
-                                
-                                -- 3. Jalankan Vote Difficulty di background
-                                pcall(function()
-                                    local args = { "dif_impossible" }
-                                    ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("PlaceDifficultyVote"):InvokeServer(unpack(args))
-                                end)
-                                
-                                -- Jeda panjang (5 detik) selagi game loading ulang
-                                task.wait(5)
                             end
                         end
                     end
