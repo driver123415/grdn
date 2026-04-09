@@ -1,5 +1,5 @@
 -- ============================================================
---              AUTO UPGRADE TOWER - V6 (CUSTOM SELECT)
+--              AUTO UPGRADE TOWER - V8 (DYNAMIC RADAR)
 --              Game: GARDEN TOWER DEFENCE
 -- ============================================================
 
@@ -7,7 +7,7 @@ local CONFIG = {
     AutoStart       = false,               
     UpgradeInterval = 2.0,                 
     MaxLevel        = 5,      
-    TargetUnits     = {}, -- Kosong di awal, kamu yang pilih dari GUI
+    TargetUnits     = {}, -- Biarkan Kosong!
     
     WaveControl     = false, 
     StartWave       = 2,  
@@ -61,7 +61,7 @@ local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, -100, 1, 0) 
 TitleLabel.Position = UDim2.new(0, 15, 0, 0) 
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Auto Upgrade (V6 Select)" 
+TitleLabel.Text = "Auto Upgrade (V8 Dynamic)" 
 TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 255) 
 TitleLabel.Font = Enum.Font.GothamBold 
 TitleLabel.TextSize = 13 
@@ -192,40 +192,24 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-local function toggleScript()
-    if isRunning then
-        isRunning = false 
-        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "MULAI UPGRADE"
-        addLog("Script dihentikan.", Color3.fromRGB(255, 150, 80))
-    else
-        if #CONFIG.TargetUnits == 0 then
-            addLog("⚠️ Pilih minimal 1 Target Unit di pengaturan!", Color3.fromRGB(255, 100, 100))
-            return
-        end
-        isRunning = true 
-        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
-        StatusText.Text = "Status: Upgrading..." StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) ToggleBtn.Text = "HENTIKAN UPGRADE"
-        scriptThread = task.spawn(runUpgrader)
-    end
-end
-ToggleBtn.MouseButton1Click:Connect(toggleScript)
+-- ============================================================
+-- FITUR: UI DATA GETTERS (DYNAMIC LOCATOR)
+-- ============================================================
 
--- ============================================================
--- FITUR: UI DATA GETTERS (UNIT & LEVEL CHECK)
--- ============================================================
+-- [ V8 FIX: DYNAMIC LOCATOR UNTUK SCROLLING FRAME ]
 local function getUnitScrollingFrame()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-    local gg = pGui and pGui:FindFirstChild("GameGui")
-    local screen = gg and gg:FindFirstChild("Screen")
-    local middle = screen and screen:FindFirstChild("Middle")
-    local um = middle and middle:FindFirstChild("UnitManager")
+    if not pGui then return nil end
     
-    if um then
-        for _, desc in ipairs(um:GetDescendants()) do
-            if desc:IsA("ScrollingFrame") then return desc end
+    -- Mencari secara dinamis ScrollingFrame yang di dalamnya ada Frame berisi Button
+    for _, obj in ipairs(pGui:GetDescendants()) do
+        if obj:IsA("ScrollingFrame") then
+            for _, child in ipairs(obj:GetChildren()) do
+                -- Karakteristik unik UI Unit: Ada "Button" di dalamnya
+                if child:IsA("Frame") and child:FindFirstChild("Button") then
+                    return obj -- BINGO! Langsung ketemu tanpa peduli path berubah
+                end
+            end
         end
     end
     return nil
@@ -250,7 +234,7 @@ local function isUIMaxLevel(uiFrame)
 end
 
 -- ============================================================
--- FITUR: DROPDOWN TARGET & AUTO DETECT LIST
+-- FITUR: DROPDOWN TARGET OTOMATIS
 -- ============================================================
 local function refreshTargetBtnText()
     if #CONFIG.TargetUnits == 0 then TargetDropdownBtn.Text = "📋 Pilih Unit Target (0 Terpilih)"
@@ -260,25 +244,38 @@ end
 
 local function updateDropdownList()
     for _, child in ipairs(DropdownMenuScroll:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
+        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
     end
     
     local uniqueUnits = {}
-    local sf = getUnitScrollingFrame()
     
-    -- RADAR OTOMATIS: Baca isi tas/map dari UI
+    -- RADAR 1: Baca langsung dari UI (Dinamis)
+    local sf = getUnitScrollingFrame()
     if sf then
         for _, child in ipairs(sf:GetChildren()) do
-            if child:IsA("Frame") and not uniqueUnits[child.Name] then
+            if child:IsA("Frame") and child:FindFirstChild("Button") and not uniqueUnits[child.Name] then
                 uniqueUnits[child.Name] = true
             end
         end
     end
     
+    -- RADAR 2: Baca langsung dari Workspace (Back-up)
+    local mapFolder = workspace:FindFirstChild("Map")
+    local entitiesFolder = mapFolder and mapFolder:FindFirstChild("Entities")
+    if entitiesFolder then
+        for _, unit in ipairs(entitiesFolder:GetChildren()) do
+            if unit:GetAttribute("ID") or unit.Name:match("unit_") then
+                uniqueUnits[unit.Name] = true
+            end
+        end
+    end
+    
+    -- Membuat Tombol List
     local count = 0
     for unitName, _ in pairs(uniqueUnits) do
         count = count + 1
         local isSelected = table.find(CONFIG.TargetUnits, unitName) ~= nil
+        
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 22)
         btn.BackgroundColor3 = isSelected and Color3.fromRGB(60, 120, 60) or Color3.fromRGB(40, 40, 55)
@@ -295,10 +292,10 @@ local function updateDropdownList()
     end
     
     if count == 0 then
-        local btn = Instance.new("TextLabel")
-        btn.Size = UDim2.new(1, 0, 0, 22) btn.BackgroundTransparency = 1
-        btn.Text = "Tidak ada unit di map/tas!" btn.TextColor3 = Color3.fromRGB(200, 100, 100)
-        btn.Font = Enum.Font.Gotham btn.TextSize = 10 btn.Parent = DropdownMenuScroll
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 22) lbl.BackgroundTransparency = 1
+        lbl.Text = "Belum ada unit di map/tas!" lbl.TextColor3 = Color3.fromRGB(200, 100, 100)
+        lbl.Font = Enum.Font.Gotham lbl.TextSize = 10 lbl.Parent = DropdownMenuScroll
     end
     
     DropdownMenuScroll.CanvasSize = UDim2.new(0, 0, 0, DropdownMenuLayout.AbsoluteContentSize.Y)
@@ -316,7 +313,7 @@ TargetDropdownBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- FITUR: AUTO WAVE DETECTOR
+-- FITUR: AUTO WAVE DETECTOR & LOGIC TOGGLE
 -- ============================================================
 local function getWaveText()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
@@ -329,6 +326,27 @@ local function getWaveText()
     local title = waves and waves:FindFirstChild("Title")
     return title and title.Text or nil
 end
+
+local function toggleScript()
+    if isRunning then
+        isRunning = false 
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        StatusText.Text = "Status: Mati" StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 160, 60) ToggleBtn.Text = "MULAI UPGRADE"
+        addLog("Script dihentikan.", Color3.fromRGB(255, 150, 80))
+    else
+        if #CONFIG.TargetUnits == 0 then
+            addLog("⚠️ Pilih minimal 1 Target Unit di pengaturan!", Color3.fromRGB(255, 100, 100))
+            return
+        end
+        isRunning = true 
+        StatusDot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
+        StatusText.Text = "Status: Upgrading..." StatusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50) ToggleBtn.Text = "HENTIKAN UPGRADE"
+        scriptThread = task.spawn(runUpgrader)
+    end
+end
+ToggleBtn.MouseButton1Click:Connect(toggleScript)
 
 task.spawn(function()
     while task.wait(1) do
@@ -356,19 +374,19 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- CORE LOGIC (CUSTOM SELECT TARGET)
+-- CORE LOGIC (CUSTOM SELECT TARGET & CHECK MAX LEVEL)
 -- ============================================================
 local UpgradeRemote = ReplicatedStorage:WaitForChild("RemoteFunctions"):WaitForChild("UpgradeUnit")
 
 function runUpgrader()
-    addLog("Mulai Sistem Prioritas Upgrade!", Color3.fromRGB(100, 255, 100))
+    addLog("Sistem Cerdas Mulai!", Color3.fromRGB(100, 255, 100))
 
     while isRunning do
         local mapFolder = workspace:FindFirstChild("Map")
         local entitiesFolder = mapFolder and mapFolder:FindFirstChild("Entities")
         local sfUI = getUnitScrollingFrame()
         
-        if not entitiesFolder or not sfUI then
+        if not entitiesFolder then
             task.wait(CONFIG.UpgradeInterval)
             continue
         end
@@ -376,10 +394,10 @@ function runUpgrader()
         local totalMaxFiltered = 0
         local totalNeedUpgrade = 0
 
-        -- HANYA eksekusi unit yang ada di daftar pilihanmu (TargetUnits)
         for _, targetName in ipairs(CONFIG.TargetUnits) do
             if not isRunning then break end
             
+            -- Ambil Fisik dari Map
             local wsUnits = {}
             for _, unit in pairs(entitiesFolder:GetChildren()) do
                 if unit.Name == targetName then
@@ -388,9 +406,12 @@ function runUpgrader()
                 end
             end
             
+            -- Ambil Data Level dari UI
             local uiFrames = {}
-            for _, child in ipairs(sfUI:GetChildren()) do
-                if child.Name == targetName then table.insert(uiFrames, child) end
+            if sfUI then
+                for _, child in ipairs(sfUI:GetChildren()) do
+                    if child.Name == targetName then table.insert(uiFrames, child) end
+                end
             end
             
             local toUpgradeIDs = {}
@@ -423,7 +444,7 @@ function runUpgrader()
 end
 
 -- ============================================================
--- SETTINGS INPUT
+-- SETTINGS INPUT & BUTTON BINDINGS
 -- ============================================================
 StartWaveBox.FocusLost:Connect(function() local num = tonumber(StartWaveBox.Text) if num then CONFIG.StartWave = num else StartWaveBox.Text = tostring(CONFIG.StartWave) end end)
 StopWaveBox.FocusLost:Connect(function() local num = tonumber(StopWaveBox.Text) if num then CONFIG.StopWave = num else StopWaveBox.Text = tostring(CONFIG.StopWave) end end)
@@ -445,4 +466,4 @@ MinBtn.MouseButton1Click:Connect(function()
 end)
 
 refreshTargetBtnText()
-print("[Auto Upgrade GUI V6] Custom Select Macro Aktif!")
+print("[Auto Upgrade GUI V8] Radar Dinamis Aktif!")
