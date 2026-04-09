@@ -4,14 +4,14 @@
 -- ============================================================
 
 local CONFIG = {
-    AutoStart       = false,               
-    UpgradeInterval = 2.0,                 
+    AutoStart       = true,               
+    UpgradeInterval = 1.0,                 
     MaxLevel        = 5,      
     TargetUnits     = {"unit_tomato_plant"}, -- Bebas mau diisi {"unit_tomato_plant"} atau dikosongkan
     
     WaveControl     = false, 
-    StartWave       = 2,  
-    StopWave        = 18, 
+    StartWave       = 10,  
+    StopWave        = 20, 
 }
 
 local Players           = game:GetService("Players")
