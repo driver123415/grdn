@@ -2,7 +2,7 @@ if game.PlaceId == 123516946198836 then -- in game
     wait(0.5)
     print ("script run atau bisa ditaruh script sih")
     wait (0.5)
-    print("Cocok Tanam Dan TP 2")
+    print("Cocok Tanam Dan TP 3")
     local function executeScripts(scripts)
         for _, script in ipairs(scripts) do
             local co = coroutine.create(function()
@@ -15,12 +15,12 @@ if game.PlaceId == 123516946198836 then -- in game
     local scripts = {
         --"https://github.com/driver123415/grdn/raw/refs/heads/main/join1", --bisa gini juga weh
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/join1", --auto join
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade
-        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low
-        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --antiafk
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiDC1"--anti dc
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place crash
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade crash
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low crash
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk aman
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiDC1"--anti dc aman
     }
     
     executeScripts(scripts)
