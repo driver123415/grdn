@@ -1,0 +1,24 @@
+wait(1)
+--print("script run")
+print("Full Script Is Running")
+local function executeScripts(scripts)
+    for _, script in ipairs(scripts) do
+        local co = coroutine.create(function()
+            loadstring(game:HttpGet(script))()
+        end)
+        coroutine.resume(co)
+    end
+end
+
+local scripts = {
+        --"https://github.com/driver123415/grdn/raw/refs/heads/main/join1", --bisa gini juga weh
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/join1", --auto join
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place crash
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade crash
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low crash
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk aman
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiDC1"--anti dc aman
+}
+
+executeScripts(scripts)
