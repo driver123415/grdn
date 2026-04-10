@@ -2,7 +2,7 @@ if game.PlaceId == 123516946198836 then -- in game
     wait(0.5)
     print ("script run atau bisa ditaruh script sih")
     wait (0.5)
-    print("Cocok Tanam Dan TP")
+    print("Cocok Tanam Dan TP 1")
     local function executeScripts(scripts)
         for _, script in ipairs(scripts) do
             local co = coroutine.create(function()
