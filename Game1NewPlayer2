@@ -19,7 +19,7 @@ if game.PlaceId == 123516946198836 then -- in game
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --antiafk
-        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk
+        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk
         "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiDC1"--anti dc
     }
     
