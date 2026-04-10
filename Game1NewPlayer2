@@ -15,8 +15,8 @@ if game.PlaceId == 123516946198836 then -- in game
     local scripts = {
         --"https://github.com/driver123415/grdn/raw/refs/heads/main/join1", --bisa gini juga weh
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/join1", --auto join
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place
-        "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenPlaceTomat", --place
+        --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/GardenUpgradeTomat", --upgrade
         "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/low2", --low
         --"https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/jalan1", --antiafk
         "https://raw.githubusercontent.com/driver123415/grdn/refs/heads/main/AntiAFK", --antiafk
